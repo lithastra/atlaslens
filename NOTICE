@@ -1,0 +1,16 @@
+AtlasLens
+Copyright 2026 AtlasLens Contributors
+
+Licensed under the Apache License, Version 2.0.
+
+This product is not affiliated with, endorsed by, or sponsored by Atlassian.
+
+Atlassian, Jira, Confluence, Bitbucket, Jira Service Management, and Atlassian
+Guard are trademarks or registered trademarks of Atlassian Pty Ltd. All product
+names, logos, and brands referenced in this project are property of their
+respective owners and are used solely for identification purposes.
+
+This project does not bundle, embed, or redistribute any Atlassian software,
+SDK, or proprietary code. It communicates with Atlassian products exclusively
+through their publicly documented REST APIs using credentials provided by the
+end user.
