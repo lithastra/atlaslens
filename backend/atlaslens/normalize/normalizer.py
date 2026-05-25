@@ -94,8 +94,19 @@ def normalize_event(
             return _normalize_confluence_audit(raw, deployment)
         if product == "jsm":
             return _normalize_jsm_audit(raw, deployment)
-    if product == "jira" and pipeline == "activity":
-        return _normalize_org_event(raw, deployment)
+    if pipeline == "activity":
+        if product == "jira":
+            if raw.event_type in _ORG_EVENT_SEVERITY or (
+                raw.payload.get("attributes") is not None
+            ):
+                return _normalize_org_event(raw, deployment)
+            return _normalize_jira_activity(raw, deployment)
+        if product == "confluence":
+            return _normalize_confluence_activity(raw, deployment)
+        if product == "bitbucket":
+            return _normalize_bitbucket_activity(raw, deployment)
+        if product == "jsm":
+            return _normalize_jsm_activity(raw, deployment)
     raise NotImplementedError(
         f"normalizer for {product}/{pipeline} not yet implemented"
     )
@@ -270,5 +281,135 @@ def _normalize_org_event(
         ),
         context=attrs.get("context", {}),
         source_ip=attrs.get("location", {}).get("ip"),
+        raw=p,
+    )
+
+
+def _normalize_jira_activity(
+    raw: RawEvent, deployment: Deployment
+) -> Event:
+    p: dict[str, Any] = raw.payload
+    fields: dict[str, Any] = p.get("fields", {})
+    creator = fields.get("creator") or {}
+    project = fields.get("project") or {}
+
+    operation = raw.event_type
+    if operation not in (
+        "issue_created",
+        "issue_updated",
+        "issue_transitioned",
+        "comment_added",
+    ):
+        operation = "issue_updated"
+
+    actor_raw = ""
+    if "author" in p and isinstance(p["author"], dict):
+        actor_raw = p["author"].get("accountId", "")
+    if not actor_raw:
+        actor_raw = creator.get("accountId", "")
+
+    return Event(
+        _id=f"{deployment}:jira:{raw.source_id}",
+        occurred_at=raw.occurred_at,
+        product="jira",
+        deployment=deployment,
+        pipeline="activity",
+        actor_raw=actor_raw,
+        operation=operation,
+        category="content",
+        severity="low",
+        object_type="ticket",
+        object_ref=ObjectRef(
+            id=p.get("key", raw.source_id),
+            name=fields.get("summary", ""),
+            container=project.get("key"),
+        ),
+        raw=p,
+    )
+
+
+def _normalize_confluence_activity(
+    raw: RawEvent, deployment: Deployment
+) -> Event:
+    p: dict[str, Any] = raw.payload
+
+    return Event(
+        _id=f"{deployment}:confluence:{raw.source_id}",
+        occurred_at=raw.occurred_at,
+        product="confluence",
+        deployment=deployment,
+        pipeline="activity",
+        actor_raw=p.get("author_id", ""),
+        operation=raw.event_type,
+        category="content",
+        severity="low",
+        object_type="page",
+        object_ref=ObjectRef(
+            id=p.get("page_id", ""),
+            name=p.get("title", ""),
+            container=p.get("space_id"),
+        ),
+        raw=p,
+    )
+
+
+def _normalize_bitbucket_activity(
+    raw: RawEvent, deployment: Deployment
+) -> Event:
+    p: dict[str, Any] = raw.payload
+    author: dict[str, Any] = p.get("author", {})
+    actor_raw = author.get("account_id", author.get("raw", ""))
+
+    obj_name = ""
+    if raw.event_type == "commit_pushed":
+        msg = p.get("message", "")
+        obj_name = msg.split("\n", 1)[0][:120] if msg else ""
+    else:
+        obj_name = p.get("title", "")
+
+    return Event(
+        _id=f"{deployment}:bitbucket:{raw.source_id}",
+        occurred_at=raw.occurred_at,
+        product="bitbucket",
+        deployment=deployment,
+        pipeline="activity",
+        actor_raw=actor_raw,
+        operation=raw.event_type,
+        category="content",
+        severity="low",
+        object_type="repo",
+        object_ref=ObjectRef(
+            id=str(p.get("hash", p.get("id", raw.source_id))),
+            name=obj_name,
+            container=p.get("repo"),
+        ),
+        raw=p,
+    )
+
+
+def _normalize_jsm_activity(
+    raw: RawEvent, deployment: Deployment
+) -> Event:
+    p: dict[str, Any] = raw.payload
+    fields: dict[str, Any] = p.get("fields", {})
+    creator = fields.get("creator") or {}
+    project = fields.get("project") or {}
+
+    return Event(
+        _id=f"{deployment}:jsm:{raw.source_id}",
+        occurred_at=raw.occurred_at,
+        product="jsm",
+        deployment=deployment,
+        pipeline="activity",
+        actor_raw=creator.get("accountId", ""),
+        operation=raw.event_type,
+        category="content",
+        severity="low",
+        object_type="request",
+        object_ref=ObjectRef(
+            id=p.get("key", raw.source_id),
+            name=fields.get("summary", ""),
+            container=project.get("key"),
+        ),
         raw=p,
     )
