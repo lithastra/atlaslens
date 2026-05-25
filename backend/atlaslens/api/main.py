@@ -3,7 +3,15 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from atlaslens.api.routes import health, sync
+from atlaslens.api.routes import (
+    aggregations,
+    auth,
+    events,
+    exports,
+    health,
+    items,
+    sync,
+)
 from atlaslens.db import close_db, connect_db
 
 
@@ -22,4 +30,9 @@ app = FastAPI(
 )
 
 app.include_router(health.router)
+app.include_router(auth.router)
+app.include_router(events.router)
+app.include_router(aggregations.router)
+app.include_router(items.router)
+app.include_router(exports.router)
 app.include_router(sync.router)
