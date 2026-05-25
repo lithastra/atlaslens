@@ -64,3 +64,7 @@ async def _create_indexes(db: AsyncIOMotorDatabase) -> None:  # type: ignore[typ
     group_map = db["group_map"]
     await group_map.create_index("source_group_id")
     await group_map.create_index("canonical_group_id")
+
+    membership = db["group_membership"]
+    await membership.create_index("canonical_group_id")
+    await membership.create_index("identity_id")

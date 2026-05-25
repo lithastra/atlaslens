@@ -6,6 +6,7 @@ import pytest
 
 from atlaslens.connectors.base import RawEvent
 from atlaslens.ingest.runner import run_connector
+from tests.mock_db import MockDB
 
 
 def _make_raw_events(n: int) -> list[RawEvent]:
@@ -33,49 +34,6 @@ def _make_raw_events(n: int) -> list[RawEvent]:
         )
         for i in range(n)
     ]
-
-
-class MockCollection:
-    def __init__(self) -> None:
-        self.docs: dict[str, dict[str, Any]] = {}
-
-    async def replace_one(
-        self,
-        filter: dict[str, Any],
-        doc: dict[str, Any],
-        upsert: bool = False,
-    ) -> None:
-        self.docs[filter["_id"]] = doc
-
-    async def find_one(
-        self, filter: dict[str, Any]
-    ) -> dict[str, Any] | None:
-        return self.docs.get(filter["_id"])
-
-    async def update_one(
-        self,
-        filter: dict[str, Any],
-        update: dict[str, Any],
-        upsert: bool = False,
-    ) -> None:
-        _id = filter["_id"]
-        if _id not in self.docs:
-            self.docs[_id] = {"_id": _id}
-        for key, val in update.get("$set", {}).items():
-            self.docs[_id][key] = val
-
-    async def count_documents(self, filter: dict[str, Any]) -> int:
-        return len(self.docs)
-
-
-class MockDB:
-    def __init__(self) -> None:
-        self._collections: dict[str, MockCollection] = {}
-
-    def __getitem__(self, name: str) -> MockCollection:
-        if name not in self._collections:
-            self._collections[name] = MockCollection()
-        return self._collections[name]
 
 
 def _make_connector(raw_events: list[RawEvent]) -> Any:
@@ -173,3 +131,15 @@ class TestRunner:
         await run_connector(db, connector, "audit")  # type: ignore[arg-type]
 
         connector.fetch_audit.assert_called_once_with("2026-03-01T00:00:00+00:00")
+
+    @pytest.mark.asyncio
+    async def test_identity_resolved_on_ingest(self) -> None:
+        db = MockDB()
+        connector = _make_connector(_make_raw_events(2))
+        await run_connector(db, connector, "audit")  # type: ignore[arg-type]
+
+        for doc in db["events"].docs.values():
+            assert doc["actor_id"] is not None
+            assert doc["actor_id"].startswith("person:")
+
+        assert len(db["identities"].docs) == 1

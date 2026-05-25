@@ -5,6 +5,7 @@ from typing import Any
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from atlaslens.connectors.base import Connector, Cursor
+from atlaslens.normalize.identity import resolve_identity
 from atlaslens.normalize.normalizer import normalize_event
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,19 @@ async def run_connector(
                 raw, connector.product, connector.deployment, pipeline  # type: ignore[arg-type]
             )
             doc = event.to_doc()
+
+            actor_id = await resolve_identity(
+                db,
+                event.actor_raw,
+                event.deployment,
+                event.product,
+                display_name=_extract_display_name(
+                    raw.payload, connector.product
+                ),
+            )
+            if actor_id:
+                doc["actor_id"] = actor_id
+
             await db["events"].replace_one(
                 {"_id": doc["_id"]}, doc, upsert=True
             )
@@ -89,3 +103,25 @@ async def _save_state(
         },
         upsert=True,
     )
+
+
+def _extract_display_name(
+    payload: dict[str, Any], product: str
+) -> str:
+    if product in ("jira", "jsm"):
+        fields = payload.get("fields") or {}
+        creator = fields.get("creator") or {}
+        if creator.get("displayName"):
+            return creator["displayName"]
+        author = payload.get("author") or {}
+        if author.get("displayName"):
+            return author["displayName"]
+    elif product == "confluence":
+        author = payload.get("author") or {}
+        if author.get("displayName"):
+            return author["displayName"]
+    elif product == "bitbucket":
+        author = payload.get("author") or {}
+        if author.get("display_name"):
+            return author["display_name"]
+    return ""
