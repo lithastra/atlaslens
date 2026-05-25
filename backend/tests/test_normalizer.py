@@ -181,7 +181,7 @@ class TestJiraAuditNormalization:
         with pytest.raises(NotImplementedError):
             normalize_event(
                 _raw_jira_audit(),
-                product="confluence",
+                product="bitbucket",
                 deployment="cloud",
                 pipeline="audit",
             )

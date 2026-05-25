@@ -52,14 +52,50 @@ _OBJECT_TYPE_MAP: dict[str, ObjectType] = {
 }
 
 
+_CONFLUENCE_AUDIT_OPERATIONS: list[tuple[str, str, Severity]] = [
+    ("permission", "permission_changed", "high"),
+    ("added to group", "group_membership_changed", "high"),
+    ("removed from group", "group_membership_changed", "high"),
+    ("space export", "data_exported", "high"),
+    ("space created", "space_created", "low"),
+    ("space deleted", "space_deleted", "high"),
+    ("space updated", "space_updated", "low"),
+    ("user created", "user_created", "medium"),
+    ("user deactivated", "user_deactivated", "medium"),
+    ("global", "global_config_changed", "high"),
+    ("application", "app_changed", "medium"),
+]
+
+_ORG_EVENT_SEVERITY: dict[str, Severity] = {
+    "user_added_to_org": "medium",
+    "user_removed_from_org": "medium",
+    "user_deactivated": "medium",
+    "user_reactivated": "medium",
+    "org_policy_changed": "high",
+    "api_key_created": "high",
+    "api_key_revoked": "high",
+    "domain_verified": "medium",
+    "domain_removed": "high",
+    "product_access_changed": "high",
+    "managed_account_updated": "medium",
+}
+
+
 def normalize_event(
     raw: RawEvent,
     product: Product,
     deployment: Deployment,
     pipeline: Pipeline,
 ) -> Event:
-    if product == "jira" and pipeline == "audit":
-        return _normalize_jira_audit(raw, deployment)
+    if pipeline == "audit":
+        if product == "jira":
+            return _normalize_jira_audit(raw, deployment)
+        if product == "confluence":
+            return _normalize_confluence_audit(raw, deployment)
+        if product == "jsm":
+            return _normalize_jsm_audit(raw, deployment)
+    if product == "jira" and pipeline == "activity":
+        return _normalize_org_event(raw, deployment)
     raise NotImplementedError(
         f"normalizer for {product}/{pipeline} not yet implemented"
     )
@@ -114,5 +150,125 @@ def _extract_changed_values(payload: dict[str, Any]) -> dict[str, Any]:
     for cv in changed:
         field = cv.get("fieldName", "")
         if field:
-            ctx[field] = {"from": cv.get("changedFrom"), "to": cv.get("changedTo")}
+            ctx[field] = {
+                "from": cv.get("changedFrom"),
+                "to": cv.get("changedTo"),
+            }
     return ctx
+
+
+def _normalize_confluence_audit(
+    raw: RawEvent, deployment: Deployment
+) -> Event:
+    p: dict[str, Any] = raw.payload
+    summary = p.get("summary", "").lower()
+
+    operation, severity = _classify_confluence_operation(summary)
+
+    obj: dict[str, Any] = p.get("objectItem") or {}
+    type_name = (obj.get("typeName") or "").upper()
+    object_type: ObjectType = _OBJECT_TYPE_MAP.get(type_name, "config")
+    if object_type == "config" and "space" in type_name.lower():
+        object_type = "space"
+
+    author: dict[str, Any] = p.get("author", {})
+    actor_raw = author.get("accountId", author.get("username", ""))
+
+    return Event(
+        _id=f"{deployment}:confluence:{raw.source_id}",
+        occurred_at=raw.occurred_at,
+        product="confluence",
+        deployment=deployment,
+        pipeline="audit",
+        actor_raw=actor_raw,
+        operation=operation,
+        category="security",
+        severity=severity,
+        object_type=object_type,
+        object_ref=ObjectRef(
+            id=obj.get("id", ""),
+            name=obj.get("name", ""),
+            container=obj.get("parentName"),
+        ),
+        context=_extract_changed_values(p),
+        source_ip=p.get("remoteAddress"),
+        raw=p,
+    )
+
+
+def _classify_confluence_operation(
+    summary: str,
+) -> tuple[str, Severity]:
+    for keyword, operation, severity in _CONFLUENCE_AUDIT_OPERATIONS:
+        if keyword in summary:
+            return operation, severity
+    return summary.replace(" ", "_"), "medium"
+
+
+def _normalize_jsm_audit(
+    raw: RawEvent, deployment: Deployment
+) -> Event:
+    p: dict[str, Any] = raw.payload
+    summary = p.get("summary", "").lower()
+    operation, severity = _classify_jira_operation(summary)
+
+    object_item: dict[str, Any] = p.get("objectItem") or {}
+    type_name = (object_item.get("typeName") or "").upper()
+    object_type: ObjectType = _OBJECT_TYPE_MAP.get(type_name, "config")
+
+    return Event(
+        _id=f"{deployment}:jsm:{raw.source_id}",
+        occurred_at=raw.occurred_at,
+        product="jsm",
+        deployment=deployment,
+        pipeline="audit",
+        actor_raw=p.get(
+            "authorAccountId", p.get("authorKey", "")
+        ),
+        operation=operation,
+        category="security",
+        severity=severity,
+        object_type=object_type,
+        object_ref=ObjectRef(
+            id=object_item.get("id", ""),
+            name=object_item.get("name", ""),
+            container=object_item.get("parentName"),
+        ),
+        context=_extract_changed_values(p),
+        source_ip=p.get("remoteAddress"),
+        raw=p,
+    )
+
+
+def _normalize_org_event(
+    raw: RawEvent, deployment: Deployment
+) -> Event:
+    p: dict[str, Any] = raw.payload
+    attrs: dict[str, Any] = p.get("attributes", {})
+    action = attrs.get("action", raw.event_type)
+    severity = _ORG_EVENT_SEVERITY.get(action, "medium")
+
+    actor_data: dict[str, Any] = attrs.get("actor", {})
+    actor_raw = actor_data.get("id", "")
+
+    target: dict[str, Any] = attrs.get("target", {})
+
+    return Event(
+        _id=f"{deployment}:org:{raw.source_id}",
+        occurred_at=raw.occurred_at,
+        product="jira",
+        deployment=deployment,
+        pipeline="audit",
+        actor_raw=actor_raw,
+        operation=action,
+        category="security",
+        severity=severity,
+        object_type="config",
+        object_ref=ObjectRef(
+            id=target.get("id", ""),
+            name=target.get("name", action),
+        ),
+        context=attrs.get("context", {}),
+        source_ip=attrs.get("location", {}).get("ip"),
+        raw=p,
+    )
