@@ -21,7 +21,10 @@ class Settings(BaseSettings):
     bitbucket_workspace: str = ""
     bitbucket_app_password: str = ""
 
+    cors_origins: list[str] = ["http://localhost:5173"]
+
     ingest_interval_minutes: int = 15
+    report_output_dir: str = "reports"
 
     model_config = {"env_prefix": "ATLASLENS_", "env_file": ".env"}
 

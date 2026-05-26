@@ -143,3 +143,87 @@ class TestRunner:
             assert doc["actor_id"].startswith("person:")
 
         assert len(db["identities"].docs) == 1
+
+    @pytest.mark.asyncio
+    async def test_group_membership_on_add(self) -> None:
+        raw = [
+            RawEvent(
+                source_id="grp-1",
+                occurred_at=datetime(2026, 3, 15, 10, 0, tzinfo=UTC),
+                event_type="User added to group",
+                payload={
+                    "id": 1,
+                    "summary": "User added to group",
+                    "remoteAddress": "10.0.0.1",
+                    "authorAccountId": "actor-1",
+                    "created": "2026-03-15T10:00:00.000+0000",
+                    "category": "group management",
+                    "eventSource": "Jira",
+                    "objectItem": {
+                        "id": "g1",
+                        "name": "admins",
+                        "typeName": "GROUP",
+                    },
+                    "changedValues": [],
+                    "associatedItems": [],
+                },
+            )
+        ]
+        db = MockDB()
+        connector = _make_connector(raw)
+        await run_connector(db, connector, "audit")  # type: ignore[arg-type]
+
+        assert len(db["source_groups"].docs) == 1
+        assert len(db["group_membership"].docs) == 1
+        mem = list(db["group_membership"].docs.values())[0]
+        assert mem["identity_id"].startswith("person:")
+
+    @pytest.mark.asyncio
+    async def test_group_membership_on_remove(self) -> None:
+        raw_add = RawEvent(
+            source_id="grp-add",
+            occurred_at=datetime(2026, 3, 15, 10, 0, tzinfo=UTC),
+            event_type="User added to group",
+            payload={
+                "id": 1,
+                "summary": "User added to group",
+                "remoteAddress": "10.0.0.1",
+                "authorAccountId": "actor-1",
+                "created": "2026-03-15T10:00:00.000+0000",
+                "category": "group management",
+                "eventSource": "Jira",
+                "objectItem": {
+                    "id": "g1",
+                    "name": "admins",
+                    "typeName": "GROUP",
+                },
+                "changedValues": [],
+                "associatedItems": [],
+            },
+        )
+        raw_remove = RawEvent(
+            source_id="grp-rm",
+            occurred_at=datetime(2026, 3, 15, 11, 0, tzinfo=UTC),
+            event_type="User removed from group",
+            payload={
+                "id": 2,
+                "summary": "User removed from group",
+                "remoteAddress": "10.0.0.1",
+                "authorAccountId": "actor-1",
+                "created": "2026-03-15T11:00:00.000+0000",
+                "category": "group management",
+                "eventSource": "Jira",
+                "objectItem": {
+                    "id": "g1",
+                    "name": "admins",
+                    "typeName": "GROUP",
+                },
+                "changedValues": [],
+                "associatedItems": [],
+            },
+        )
+        db = MockDB()
+        connector = _make_connector([raw_add, raw_remove])
+        await run_connector(db, connector, "audit")  # type: ignore[arg-type]
+
+        assert len(db["group_membership"].docs) == 0

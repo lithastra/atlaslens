@@ -17,7 +17,7 @@ from atlaslens.db import close_db, connect_db
 async def _seed(username: str, password: str) -> None:
     db = await connect_db()
     try:
-        existing = await db["users"].find_one(
+        existing: dict[str, object] | None = await db["users"].find_one(  # type: ignore[func-returns-value]
             {"username": username}
         )
         if existing:

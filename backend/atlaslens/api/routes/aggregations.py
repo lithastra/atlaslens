@@ -9,7 +9,7 @@ from atlaslens.api.deps import get_current_user, get_database
 router = APIRouter(prefix="/aggregations", tags=["aggregations"])
 
 DB = Annotated[
-    AsyncIOMotorDatabase, Depends(get_database)  # type: ignore[type-arg]
+    AsyncIOMotorDatabase, Depends(get_database)
 ]
 CurrentUser = Annotated[dict[str, Any], Depends(get_current_user)]
 
@@ -75,7 +75,8 @@ async def timeseries(
     ]
 
     results: list[dict[str, Any]] = []
-    async for doc in db["events"].aggregate(agg_pipeline):
+    doc: dict[str, Any]
+    async for doc in db["events"].aggregate(agg_pipeline):  # type: ignore[attr-defined]
         bucket = doc.get("bucket")
         if isinstance(bucket, datetime):
             doc["bucket"] = bucket.isoformat()
@@ -136,7 +137,8 @@ async def top(
     ]
 
     results: list[dict[str, Any]] = []
-    async for doc in db["events"].aggregate(agg_pipeline):
+    doc: dict[str, Any]
+    async for doc in db["events"].aggregate(agg_pipeline):  # type: ignore[attr-defined]
         results.append(doc)
     return results
 
@@ -199,7 +201,8 @@ async def summary(
     ]
 
     result: dict[str, Any] = {}
-    async for doc in db["events"].aggregate(agg_pipeline):
+    doc: dict[str, Any]
+    async for doc in db["events"].aggregate(agg_pipeline):  # type: ignore[attr-defined]
         total_list = doc.get("total", [])
         result["total_events"] = (
             total_list[0]["n"] if total_list else 0

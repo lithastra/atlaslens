@@ -9,7 +9,7 @@ from atlaslens.api.deps import get_current_user, get_database
 router = APIRouter(tags=["items"])
 
 DB = Annotated[
-    AsyncIOMotorDatabase, Depends(get_database)  # type: ignore[type-arg]
+    AsyncIOMotorDatabase, Depends(get_database)
 ]
 CurrentUser = Annotated[dict[str, Any], Depends(get_current_user)]
 
@@ -128,7 +128,8 @@ async def list_items(
         "skip": skip,
         "limit": limit,
     }
-    async for doc in db["events"].aggregate(agg):
+    doc: dict[str, Any]
+    async for doc in db["events"].aggregate(agg):  # type: ignore[attr-defined]
         total_list = doc.get("total", [])
         result["total"] = (
             total_list[0]["n"] if total_list else 0

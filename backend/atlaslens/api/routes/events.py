@@ -9,7 +9,7 @@ from atlaslens.api.deps import get_current_user, get_database
 router = APIRouter(tags=["events"])
 
 DB = Annotated[
-    AsyncIOMotorDatabase, Depends(get_database)  # type: ignore[type-arg]
+    AsyncIOMotorDatabase, Depends(get_database)
 ]
 CurrentUser = Annotated[dict[str, Any], Depends(get_current_user)]
 
@@ -68,7 +68,10 @@ async def list_events(
         .skip(skip)
         .limit(limit)
     )
-    items = [_serialize(doc) async for doc in cursor]
+    items: list[dict[str, Any]] = []
+    doc: dict[str, Any]
+    async for doc in cursor:
+        items.append(_serialize(doc))
 
     return {
         "items": items,
@@ -84,7 +87,7 @@ async def get_event(
     db: DB,
     _user: CurrentUser,
 ) -> dict[str, Any]:
-    doc = await db["events"].find_one({"_id": event_id})
+    doc: dict[str, Any] | None = await db["events"].find_one({"_id": event_id})  # type: ignore[func-returns-value]
     if not doc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -192,14 +195,17 @@ def _build_date_filter(
 
 
 async def _resolve_group_members(
-    db: AsyncIOMotorDatabase,  # type: ignore[type-arg]
+    db: AsyncIOMotorDatabase,
     group: str,
 ) -> list[str] | None:
     docs = db["group_membership"].find(
         {"canonical_group_id": group},
         {"identity_id": 1},
     )
-    ids = [d["identity_id"] async for d in docs]
+    ids: list[str] = []
+    d: dict[str, Any]
+    async for d in docs:
+        ids.append(d["identity_id"])
     return ids if ids else None
 
 

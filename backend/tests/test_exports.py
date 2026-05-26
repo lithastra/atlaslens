@@ -168,6 +168,22 @@ class TestExportEndpoint:
         assert int(match.group(1)) == 0
 
 
+    def test_pdf_export(self) -> None:
+        db = _MockDB()
+        _setup(db)
+        db["events"].find = lambda *a, **kw: _AsyncIter(_EVENTS)
+
+        app.dependency_overrides[get_database] = lambda: db
+        client = TestClient(app, raise_server_exceptions=False)
+        resp = client.post("/exports?format=pdf", headers=_auth())
+        app.dependency_overrides.clear()
+
+        assert resp.status_code == 200
+        assert "application/pdf" in resp.headers["content-type"]
+        assert resp.content[:5] == b"%PDF-"
+        assert len(resp.content) > 500
+
+
 class TestVerifyCli:
     def test_verify_valid_file(self, tmp_path: Any) -> None:
         buf = io.StringIO()

@@ -1,11 +1,11 @@
-interface KpiCardProps {
+export interface KpiCardProps {
   label: string;
   value: string | number;
   subtitle?: string;
-  accent: string;
+  accent?: string;
 }
 
-export default function KpiCard({ label, value, subtitle, accent }: KpiCardProps) {
+export default function KpiCard({ label, value, subtitle, accent = '#888' }: KpiCardProps) {
   return (
     <div className="card kpi">
       <div className="k-acc" style={{ background: accent }} />

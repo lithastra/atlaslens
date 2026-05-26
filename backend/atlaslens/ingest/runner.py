@@ -5,6 +5,11 @@ from typing import Any
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from atlaslens.connectors.base import Connector, Cursor
+from atlaslens.normalize.groups import (
+    remove_membership,
+    set_membership,
+    upsert_source_group,
+)
 from atlaslens.normalize.identity import resolve_identity
 from atlaslens.normalize.normalizer import normalize_event
 
@@ -12,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 async def run_connector(
-    db: AsyncIOMotorDatabase,  # type: ignore[type-arg]
+    db: AsyncIOMotorDatabase,
     connector: Connector,
     pipeline: str,
 ) -> int:
@@ -52,6 +57,11 @@ async def run_connector(
             )
             count += 1
 
+            if event.operation == "group_membership_changed" and actor_id:
+                await _handle_group_membership(
+                    db, event.raw or raw.payload, actor_id, event.product
+                )
+
             if latest_ts is None or raw.occurred_at > latest_ts:
                 latest_ts = raw.occurred_at
 
@@ -79,17 +89,17 @@ async def run_connector(
 
 
 async def _load_cursor(
-    db: AsyncIOMotorDatabase,  # type: ignore[type-arg]
+    db: AsyncIOMotorDatabase,
     state_id: str,
 ) -> Cursor:
-    doc: dict[str, Any] | None = await db["sync_state"].find_one({"_id": state_id})
+    doc: dict[str, Any] | None = await db["sync_state"].find_one({"_id": state_id})  # type: ignore[func-returns-value]
     if doc and doc.get("cursor"):
-        return doc["cursor"]
+        return str(doc["cursor"])
     return None
 
 
 async def _save_state(
-    db: AsyncIOMotorDatabase,  # type: ignore[type-arg]
+    db: AsyncIOMotorDatabase,
     state_id: str,
     cursor: str | None,
 ) -> None:
@@ -105,6 +115,44 @@ async def _save_state(
     )
 
 
+async def _handle_group_membership(
+    db: AsyncIOMotorDatabase,
+    raw: dict[str, Any],
+    actor_id: str,
+    product: str,
+) -> None:
+    summary = (raw.get("summary") or "").lower()
+    group_name = ""
+
+    obj = raw.get("objectItem") or {}
+    if (obj.get("typeName") or "").upper() == "GROUP":
+        group_name = obj.get("name", "")
+
+    if not group_name:
+        for item in raw.get("associatedItems") or []:
+            if (item.get("typeName") or "").upper() == "GROUP":
+                group_name = item.get("name", "")
+                break
+
+    if not group_name:
+        return
+
+    namespace = f"atlassian-org:{product}"
+    sg_id = await upsert_source_group(
+        db, namespace, group_name, group_name
+    )
+
+    cg: dict[str, Any] | None = await db[  # type: ignore[func-returns-value]
+        "canonical_groups"
+    ].find_one({"name": group_name})
+    canonical_id = cg["_id"] if cg else sg_id
+
+    if "added to group" in summary:
+        await set_membership(db, canonical_id, actor_id)
+    elif "removed from group" in summary:
+        await remove_membership(db, canonical_id, actor_id)
+
+
 def _extract_display_name(
     payload: dict[str, Any], product: str
 ) -> str:
@@ -112,16 +160,16 @@ def _extract_display_name(
         fields = payload.get("fields") or {}
         creator = fields.get("creator") or {}
         if creator.get("displayName"):
-            return creator["displayName"]
+            return str(creator["displayName"])
         author = payload.get("author") or {}
         if author.get("displayName"):
-            return author["displayName"]
+            return str(author["displayName"])
     elif product == "confluence":
         author = payload.get("author") or {}
         if author.get("displayName"):
-            return author["displayName"]
+            return str(author["displayName"])
     elif product == "bitbucket":
         author = payload.get("author") or {}
         if author.get("display_name"):
-            return author["display_name"]
+            return str(author["display_name"])
     return ""

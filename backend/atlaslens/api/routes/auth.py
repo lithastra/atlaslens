@@ -10,7 +10,7 @@ from atlaslens.api.deps import get_current_user, get_database
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 DB = Annotated[
-    AsyncIOMotorDatabase, Depends(get_database)  # type: ignore[type-arg]
+    AsyncIOMotorDatabase, Depends(get_database)
 ]
 CurrentUser = Annotated[dict[str, Any], Depends(get_current_user)]
 
@@ -27,7 +27,9 @@ class TokenResponse(BaseModel):
 
 @router.post("/login")
 async def login(body: LoginRequest, db: DB) -> TokenResponse:
-    user = await db["users"].find_one({"username": body.username})
+    user: dict[str, Any] | None = await db["users"].find_one(  # type: ignore[func-returns-value]
+        {"username": body.username}
+    )
     if not user or not verify_password(
         body.password, user["password_hash"]
     ):

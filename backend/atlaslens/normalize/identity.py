@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 
 async def resolve_identity(
-    db: AsyncIOMotorDatabase,  # type: ignore[type-arg]
+    db: AsyncIOMotorDatabase,
     actor_raw: str,
     deployment: str,
     product: str,
@@ -22,7 +22,7 @@ async def resolve_identity(
         return None
 
     col = db["identities"]
-    doc: dict[str, Any] | None = await col.find_one(
+    doc: dict[str, Any] | None = await col.find_one(  # type: ignore[func-returns-value]
         {"accounts.external_id": actor_raw}
     )
 
@@ -84,7 +84,7 @@ async def resolve_identity(
 
 
 async def backfill_actor_ids(
-    db: AsyncIOMotorDatabase,  # type: ignore[type-arg]
+    db: AsyncIOMotorDatabase,
     batch_size: int = 500,
 ) -> int:
     """Set actor_id on events that have actor_raw but no actor_id."""
@@ -95,6 +95,7 @@ async def backfill_actor_ids(
         {"actor_raw": 1, "deployment": 1, "product": 1},
     ).batch_size(batch_size)
 
+    doc: dict[str, Any]
     async for doc in cursor:
         actor_id = await resolve_identity(
             db,

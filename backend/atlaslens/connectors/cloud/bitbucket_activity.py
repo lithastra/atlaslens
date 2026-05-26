@@ -5,6 +5,7 @@ from datetime import datetime
 import httpx
 
 from atlaslens.connectors.base import Cursor, RawEvent
+from atlaslens.connectors.rate_budget import RateBudget
 from atlaslens.models.event import Deployment, Product
 
 logger = logging.getLogger(__name__)
@@ -26,11 +27,13 @@ class BitbucketActivityConnector:
         auth: tuple[str, str],
         client: httpx.AsyncClient,
         repositories: list[str] | None = None,
+        budget: RateBudget | None = None,
     ) -> None:
         self._workspace = workspace
         self._auth = auth
         self._client = client
         self._repos = repositories or []
+        self._budget = budget
 
     async def fetch_audit(self, cursor: Cursor) -> list[RawEvent]:
         return []
@@ -177,12 +180,14 @@ class BitbucketActivityConnector:
         url: str,
         **kwargs: object,
     ) -> httpx.Response:
+        if self._budget:
+            await self._budget.acquire()
         for attempt in range(_MAX_RETRIES):
             try:
                 resp = await self._client.request(
                     method,
                     url,
-                    auth=self._auth,  # type: ignore[arg-type]
+                    auth=self._auth,
                     timeout=30.0,
                     **kwargs,  # type: ignore[arg-type]
                 )

@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 async def upsert_canonical_group(
-    db: AsyncIOMotorDatabase,  # type: ignore[type-arg]
+    db: AsyncIOMotorDatabase,
     group_id: str,
     name: str,
     description: str = "",
@@ -29,7 +29,7 @@ async def upsert_canonical_group(
 
 
 async def upsert_source_group(
-    db: AsyncIOMotorDatabase,  # type: ignore[type-arg]
+    db: AsyncIOMotorDatabase,
     namespace: str,
     native_id: str,
     native_name: str,
@@ -52,20 +52,21 @@ async def upsert_source_group(
 
 
 async def auto_map_groups(
-    db: AsyncIOMotorDatabase,  # type: ignore[type-arg]
+    db: AsyncIOMotorDatabase,
 ) -> int:
     """Match unmapped source groups to canonical groups by name."""
     mapped = 0
+    sg: dict[str, Any]
     async for sg in db["source_groups"].find():
-        sg_id = sg["_id"]
-        existing: dict[str, Any] | None = await db[
+        sg_id: str = sg["_id"]
+        existing: dict[str, Any] | None = await db[  # type: ignore[func-returns-value]
             "group_map"
         ].find_one({"source_group_id": sg_id})
         if existing:
             continue
 
-        native = sg["native_name"]
-        cg: dict[str, Any] | None = await db[
+        native: str = sg["native_name"]
+        cg: dict[str, Any] | None = await db[  # type: ignore[func-returns-value]
             "canonical_groups"
         ].find_one({"name": native})
         method = "auto_name"
@@ -73,7 +74,7 @@ async def auto_map_groups(
 
         if not cg:
             pattern = f"^{re.escape(native)}$"
-            cg = await db["canonical_groups"].find_one(
+            cg = await db["canonical_groups"].find_one(  # type: ignore[func-returns-value]
                 {"name": {"$regex": pattern, "$options": "i"}}
             )
             method = "auto_name_icase"
@@ -100,7 +101,7 @@ async def auto_map_groups(
 
 
 async def set_membership(
-    db: AsyncIOMotorDatabase,  # type: ignore[type-arg]
+    db: AsyncIOMotorDatabase,
     canonical_group_id: str,
     identity_id: str,
 ) -> None:
@@ -118,7 +119,7 @@ async def set_membership(
 
 
 async def remove_membership(
-    db: AsyncIOMotorDatabase,  # type: ignore[type-arg]
+    db: AsyncIOMotorDatabase,
     canonical_group_id: str,
     identity_id: str,
 ) -> None:
@@ -127,35 +128,45 @@ async def remove_membership(
 
 
 async def get_members(
-    db: AsyncIOMotorDatabase,  # type: ignore[type-arg]
+    db: AsyncIOMotorDatabase,
     canonical_group_id: str,
 ) -> list[str]:
     docs = db["group_membership"].find(
         {"canonical_group_id": canonical_group_id},
         {"identity_id": 1},
     )
-    return [d["identity_id"] async for d in docs]
+    result: list[str] = []
+    d: dict[str, Any]
+    async for d in docs:
+        result.append(d["identity_id"])
+    return result
 
 
 async def get_groups_for_identity(
-    db: AsyncIOMotorDatabase,  # type: ignore[type-arg]
+    db: AsyncIOMotorDatabase,
     identity_id: str,
 ) -> list[str]:
     docs = db["group_membership"].find(
         {"identity_id": identity_id},
         {"canonical_group_id": 1},
     )
-    return [d["canonical_group_id"] async for d in docs]
+    result: list[str] = []
+    d: dict[str, Any]
+    async for d in docs:
+        result.append(d["canonical_group_id"])
+    return result
 
 
 async def get_unmapped_source_groups(
-    db: AsyncIOMotorDatabase,  # type: ignore[type-arg]
+    db: AsyncIOMotorDatabase,
 ) -> list[dict[str, Any]]:
     mapped_ids: set[str] = set()
+    m: dict[str, Any]
     async for m in db["group_map"].find({}, {"source_group_id": 1}):
         mapped_ids.add(m["source_group_id"])
 
     unmapped: list[dict[str, Any]] = []
+    sg: dict[str, Any]
     async for sg in db["source_groups"].find():
         if sg["_id"] not in mapped_ids:
             unmapped.append(sg)

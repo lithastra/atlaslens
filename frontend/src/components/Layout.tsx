@@ -1,6 +1,6 @@
 import { Outlet, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useFilters, type Filters } from '../context/FilterContext';
+import { useFilters } from '../context/FilterContext';
 
 const PRODUCTS = [
   { id: 'jira', name: 'Jira', color: '#2f6fed' },
@@ -104,7 +104,7 @@ export default function Layout() {
           {'↡'} Export
         </button>
 
-        <div className="avatar" title={user?.username ?? ''}>
+        <div className="avatar" title={user?.username ?? ''} onClick={logout} style={{ cursor: 'pointer' }}>
           {user ? initials(user.username) : '?'}
         </div>
       </header>

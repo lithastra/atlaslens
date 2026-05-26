@@ -8,7 +8,7 @@ from atlaslens.api.deps import get_database
 router = APIRouter(tags=["sync"])
 
 DB = Annotated[
-    AsyncIOMotorDatabase, Depends(get_database)  # type: ignore[type-arg]
+    AsyncIOMotorDatabase, Depends(get_database)
 ]
 
 _CONNECTORS = [
@@ -38,7 +38,7 @@ _CONNECTORS = [
 async def sync_status(db: DB) -> list[dict[str, Any]]:
     statuses: list[dict[str, Any]] = []
     for conn in _CONNECTORS:
-        state = await db["sync_state"].find_one(
+        state: dict[str, Any] | None = await db["sync_state"].find_one(  # type: ignore[func-returns-value]
             {"_id": conn["id"]}
         )
         statuses.append({

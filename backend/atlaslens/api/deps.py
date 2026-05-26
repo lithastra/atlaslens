@@ -11,13 +11,13 @@ from atlaslens.db import get_db
 _bearer = HTTPBearer(auto_error=False)
 
 
-async def get_database() -> AsyncIOMotorDatabase:  # type: ignore[type-arg]
+async def get_database() -> AsyncIOMotorDatabase:
     return get_db()
 
 
 async def get_current_user(
     db: Annotated[
-        AsyncIOMotorDatabase, Depends(get_database)  # type: ignore[type-arg]
+        AsyncIOMotorDatabase, Depends(get_database)
     ],
     credentials: Annotated[
         HTTPAuthorizationCredentials | None, Depends(_bearer)
@@ -48,7 +48,7 @@ async def get_current_user(
             detail="Invalid token payload",
         )
 
-    user = await db["users"].find_one({"username": username})
+    user: dict[str, Any] | None = await db["users"].find_one({"username": username})  # type: ignore[func-returns-value]
     if not user or user.get("disabled"):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

@@ -7,7 +7,7 @@ from atlaslens.api.deps import get_database
 
 router = APIRouter(tags=["health"])
 
-DB = Annotated[AsyncIOMotorDatabase, Depends(get_database)]  # type: ignore[type-arg]
+DB = Annotated[AsyncIOMotorDatabase, Depends(get_database)]
 
 
 @router.get("/health")

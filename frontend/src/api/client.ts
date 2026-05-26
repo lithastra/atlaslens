@@ -160,14 +160,55 @@ export function getSyncStatus() {
   return request<ConnectorStatus[]>('/sync-status');
 }
 
-export function exportCsv(params: Record<string, string | string[]>) {
+export function exportData(params: Record<string, string | string[]>, format: 'csv' | 'pdf' = 'csv') {
   const sp = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
     if (Array.isArray(v)) v.forEach(x => sp.append(k, x));
     else if (v) sp.append(k, v);
   }
+  sp.set('format', format);
   return fetch(`${BASE}/exports?${sp}`, {
     method: 'POST',
     headers: authHeaders(),
+  });
+}
+
+export function exportCsv(params: Record<string, string | string[]>) {
+  return exportData(params, 'csv');
+}
+
+export interface ScheduledReport {
+  id: string;
+  name: string;
+  schedule: string;
+  format: string;
+  filters: Record<string, unknown>;
+  enabled: boolean;
+  created_at: string;
+  created_by: string;
+  last_run_at: string | null;
+  last_output: string | null;
+  last_count: number | null;
+}
+
+export function getScheduledReports() {
+  return request<ScheduledReport[]>('/reports/scheduled');
+}
+
+export function createScheduledReport(body: {
+  name: string;
+  schedule: string;
+  format: string;
+  filters: Record<string, unknown>;
+}) {
+  return request<ScheduledReport>('/reports/scheduled', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteScheduledReport(id: string) {
+  return request<{ status: string }>(`/reports/scheduled/${id}`, {
+    method: 'DELETE',
   });
 }

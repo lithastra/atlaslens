@@ -5,6 +5,7 @@ from datetime import datetime
 import httpx
 
 from atlaslens.connectors.base import Cursor, RawEvent
+from atlaslens.connectors.rate_budget import RateBudget
 from atlaslens.models.event import Deployment, Product
 
 logger = logging.getLogger(__name__)
@@ -30,10 +31,12 @@ class OrgEventsConnector:
         org_id: str,
         api_key: str,
         client: httpx.AsyncClient,
+        budget: RateBudget | None = None,
     ) -> None:
         self._org_id = org_id
         self._api_key = api_key
         self._client = client
+        self._budget = budget
 
     async def fetch_audit(self, cursor: Cursor) -> list[RawEvent]:
         events: list[RawEvent] = []
@@ -86,6 +89,8 @@ class OrgEventsConnector:
         url: str,
         **kwargs: object,
     ) -> httpx.Response:
+        if self._budget:
+            await self._budget.acquire()
         headers = {"Authorization": f"Bearer {self._api_key}"}
         for attempt in range(_MAX_RETRIES):
             try:

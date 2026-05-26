@@ -125,7 +125,7 @@ def _normalize_jira_audit(raw: RawEvent, deployment: Deployment) -> Event:
     context = _extract_changed_values(p)
 
     return Event(
-        _id=f"{deployment}:jira:{raw.source_id}",
+        id=f"{deployment}:jira:{raw.source_id}",
         occurred_at=raw.occurred_at,
         product="jira",
         deployment=deployment,
@@ -186,7 +186,7 @@ def _normalize_confluence_audit(
     actor_raw = author.get("accountId", author.get("username", ""))
 
     return Event(
-        _id=f"{deployment}:confluence:{raw.source_id}",
+        id=f"{deployment}:confluence:{raw.source_id}",
         occurred_at=raw.occurred_at,
         product="confluence",
         deployment=deployment,
@@ -228,7 +228,7 @@ def _normalize_jsm_audit(
     object_type: ObjectType = _OBJECT_TYPE_MAP.get(type_name, "config")
 
     return Event(
-        _id=f"{deployment}:jsm:{raw.source_id}",
+        id=f"{deployment}:jsm:{raw.source_id}",
         occurred_at=raw.occurred_at,
         product="jsm",
         deployment=deployment,
@@ -265,7 +265,7 @@ def _normalize_org_event(
     target: dict[str, Any] = attrs.get("target", {})
 
     return Event(
-        _id=f"{deployment}:org:{raw.source_id}",
+        id=f"{deployment}:org:{raw.source_id}",
         occurred_at=raw.occurred_at,
         product="jira",
         deployment=deployment,
@@ -309,7 +309,7 @@ def _normalize_jira_activity(
         actor_raw = creator.get("accountId", "")
 
     return Event(
-        _id=f"{deployment}:jira:{raw.source_id}",
+        id=f"{deployment}:jira:{raw.source_id}",
         occurred_at=raw.occurred_at,
         product="jira",
         deployment=deployment,
@@ -334,7 +334,7 @@ def _normalize_confluence_activity(
     p: dict[str, Any] = raw.payload
 
     return Event(
-        _id=f"{deployment}:confluence:{raw.source_id}",
+        id=f"{deployment}:confluence:{raw.source_id}",
         occurred_at=raw.occurred_at,
         product="confluence",
         deployment=deployment,
@@ -368,7 +368,7 @@ def _normalize_bitbucket_activity(
         obj_name = p.get("title", "")
 
     return Event(
-        _id=f"{deployment}:bitbucket:{raw.source_id}",
+        id=f"{deployment}:bitbucket:{raw.source_id}",
         occurred_at=raw.occurred_at,
         product="bitbucket",
         deployment=deployment,
@@ -396,7 +396,7 @@ def _normalize_jsm_activity(
     project = fields.get("project") or {}
 
     return Event(
-        _id=f"{deployment}:jsm:{raw.source_id}",
+        id=f"{deployment}:jsm:{raw.source_id}",
         occurred_at=raw.occurred_at,
         product="jsm",
         deployment=deployment,

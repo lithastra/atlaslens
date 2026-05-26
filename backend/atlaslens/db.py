@@ -3,11 +3,11 @@ from pymongo import ASCENDING, DESCENDING, TEXT
 
 from atlaslens.config import settings
 
-_client: AsyncIOMotorClient | None = None  # type: ignore[type-arg]
-_db: AsyncIOMotorDatabase | None = None  # type: ignore[type-arg]
+_client: AsyncIOMotorClient | None = None
+_db: AsyncIOMotorDatabase | None = None
 
 
-async def connect_db() -> AsyncIOMotorDatabase:  # type: ignore[type-arg]
+async def connect_db() -> AsyncIOMotorDatabase:
     global _client, _db
     _client = AsyncIOMotorClient(settings.mongo_uri)
     _db = _client[settings.mongo_db]
@@ -23,13 +23,13 @@ async def close_db() -> None:
     _db = None
 
 
-def get_db() -> AsyncIOMotorDatabase:  # type: ignore[type-arg]
+def get_db() -> AsyncIOMotorDatabase:
     if _db is None:
         raise RuntimeError("Database not connected — call connect_db() first")
     return _db
 
 
-async def _create_indexes(db: AsyncIOMotorDatabase) -> None:  # type: ignore[type-arg]
+async def _create_indexes(db: AsyncIOMotorDatabase) -> None:
     events = db["events"]
     await events.create_index([("occurred_at", DESCENDING)])
     await events.create_index([("product", ASCENDING), ("occurred_at", DESCENDING)])

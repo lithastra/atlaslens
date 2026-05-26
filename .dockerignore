@@ -1,0 +1,11 @@
+.venv
+.git
+__pycache__
+*.pyc
+.env
+node_modules
+frontend/dist
+frontend/node_modules
+*.md
+*.docx
+*.html

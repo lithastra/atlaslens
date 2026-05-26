@@ -1,10 +1,12 @@
 import asyncio
 import logging
 from datetime import datetime
+from typing import Any
 
 import httpx
 
 from atlaslens.connectors.base import Cursor, RawEvent
+from atlaslens.connectors.rate_budget import RateBudget
 from atlaslens.models.event import Deployment, Product
 
 logger = logging.getLogger(__name__)
@@ -29,10 +31,12 @@ class JiraActivityConnector:
         base_url: str,
         auth: tuple[str, str],
         client: httpx.AsyncClient,
+        budget: RateBudget | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._auth = auth
         self._client = client
+        self._budget = budget
 
     async def fetch_audit(self, cursor: Cursor) -> list[RawEvent]:
         return []
@@ -72,7 +76,7 @@ class JiraActivityConnector:
                 json=body,
             )
             data = resp.json()
-            issues: list[dict] = data.get("issues", [])  # type: ignore[type-arg]
+            issues: list[dict[str, Any]] = data.get("issues", [])
 
             for issue in issues:
                 fields = issue.get("fields", {})
@@ -114,12 +118,14 @@ class JiraActivityConnector:
         url: str,
         **kwargs: object,
     ) -> httpx.Response:
+        if self._budget:
+            await self._budget.acquire()
         for attempt in range(_MAX_RETRIES):
             try:
                 resp = await self._client.request(
                     method,
                     url,
-                    auth=self._auth,  # type: ignore[arg-type]
+                    auth=self._auth,
                     timeout=30.0,
                     **kwargs,  # type: ignore[arg-type]
                 )
