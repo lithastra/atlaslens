@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useFilters } from '../context/FilterContext';
-import { getEvents, getTop, type EventItem, type TopItem } from '../api/client';
+import { getEvents, getFilters, getTop, type EventItem, type TopItem } from '../api/client';
 import HBar from '../components/HBar';
 
 const PRODUCT_COLORS: Record<string, string> = {
@@ -9,7 +9,7 @@ const PRODUCT_COLORS: Record<string, string> = {
 
 export default function TimelinePage() {
   const { toParams } = useFilters();
-  const [actors, setActors] = useState<TopItem[]>([]);
+  const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
   const [selectedUser, setSelectedUser] = useState('');
   const [events, setEvents] = useState<EventItem[]>([]);
   const [byProduct, setByProduct] = useState<TopItem[]>([]);
@@ -17,9 +17,8 @@ export default function TimelinePage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const params = toParams();
-    getTop({ ...params, field: 'actor', limit: '50' }).then(setActors);
-  }, [toParams]);
+    getFilters().then((f) => setUsers(f.users)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!selectedUser) {
@@ -58,8 +57,8 @@ export default function TimelinePage() {
               style={{ height: 34, border: '1px solid #e3e8f0', borderRadius: 8, padding: '0 8px', minWidth: 220 }}
             >
               <option value="">Select a user...</option>
-              {actors.map((a) => (
-                <option key={a.key} value={a.key}>{a.key} ({a.count})</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>{u.name}</option>
               ))}
             </select>
           </div>

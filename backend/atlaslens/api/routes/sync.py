@@ -12,24 +12,28 @@ DB = Annotated[
 ]
 
 _CONNECTORS = [
-    {"id": "cloud:jira:audit", "product": "jira", "deployment": "cloud"},
     {
         "id": "cloud:confluence:audit",
         "product": "confluence",
         "deployment": "cloud",
-    },
-    {"id": "cloud:jsm:audit", "product": "jsm", "deployment": "cloud"},
-    {
-        "id": "cloud:org:audit",
-        "product": "jira",
-        "deployment": "cloud",
-        "note": "org events-stream",
     },
     {
         "id": "cloud:bitbucket:audit",
         "product": "bitbucket",
         "deployment": "cloud",
         "note": "UNAVAILABLE — requires Atlassian Guard",
+    },
+    {"id": "cloud:jira:activity", "product": "jira", "deployment": "cloud"},
+    {
+        "id": "cloud:confluence:activity",
+        "product": "confluence",
+        "deployment": "cloud",
+    },
+    {"id": "cloud:jsm:activity", "product": "jsm", "deployment": "cloud"},
+    {
+        "id": "cloud:bitbucket:activity",
+        "product": "bitbucket",
+        "deployment": "cloud",
     },
 ]
 
@@ -45,9 +49,9 @@ async def sync_status(db: DB) -> list[dict[str, Any]]:
             "connector": conn["id"],
             "product": conn["product"],
             "deployment": conn["deployment"],
-            "cursor": state["cursor"] if state else None,
+            "cursor": state.get("cursor") if state else None,
             "last_success_at": (
-                state["last_success_at"] if state else None
+                state.get("last_success_at") if state else None
             ),
             "last_error": state.get("last_error") if state else None,
             "note": conn.get("note"),

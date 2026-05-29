@@ -73,6 +73,8 @@ async def list_events(
     async for doc in cursor:
         items.append(_serialize(doc))
 
+    await _resolve_actor_names(db, items)
+
     return {
         "items": items,
         "total": total,
@@ -207,6 +209,31 @@ async def _resolve_group_members(
     async for d in docs:
         ids.append(d["identity_id"])
     return ids if ids else None
+
+
+async def _resolve_actor_names(
+    db: AsyncIOMotorDatabase,
+    items: list[dict[str, Any]],
+) -> None:
+    actor_ids = {
+        item["actor_id"]
+        for item in items
+        if item.get("actor_id")
+    }
+    if not actor_ids:
+        return
+    name_map: dict[str, str] = {}
+    doc: dict[str, Any]
+    async for doc in db["identities"].find(  # type: ignore[attr-defined]
+        {"_id": {"$in": list(actor_ids)}},
+        {"display_name": 1},
+    ):
+        if doc.get("display_name"):
+            name_map[doc["_id"]] = doc["display_name"]
+    for item in items:
+        aid = item.get("actor_id")
+        if aid and aid in name_map:
+            item["actor_display_name"] = name_map[aid]
 
 
 def _serialize(doc: dict[str, Any]) -> dict[str, Any]:

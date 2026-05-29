@@ -361,11 +361,14 @@ def _normalize_bitbucket_activity(
     actor_raw = author.get("account_id", author.get("raw", ""))
 
     obj_name = ""
+    object_type: ObjectType
     if raw.event_type == "commit_pushed":
         msg = p.get("message", "")
         obj_name = msg.split("\n", 1)[0][:120] if msg else ""
+        object_type = "commit"
     else:
         obj_name = p.get("title", "")
+        object_type = "pull_request"
 
     return Event(
         id=f"{deployment}:bitbucket:{raw.source_id}",
@@ -377,7 +380,7 @@ def _normalize_bitbucket_activity(
         operation=raw.event_type,
         category="content",
         severity="low",
-        object_type="repo",
+        object_type=object_type,
         object_ref=ObjectRef(
             id=str(p.get("hash", p.get("id", raw.source_id))),
             name=obj_name,

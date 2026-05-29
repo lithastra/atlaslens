@@ -150,7 +150,7 @@ export default function OverviewPage() {
                     <td className="muted" style={{ whiteSpace: 'nowrap', fontSize: 12 }}>
                       {new Date(e.occurred_at).toLocaleString()}
                     </td>
-                    <td>{e.actor_raw}</td>
+                    <td>{e.actor_display_name || e.actor_raw}</td>
                     <td>
                       <span className="pdot" style={{ background: PRODUCT_COLORS[e.product] ?? '#999' }} />{' '}
                       {e.product}

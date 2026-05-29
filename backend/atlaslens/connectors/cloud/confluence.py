@@ -114,9 +114,11 @@ class ConfluenceCloudConnector:
         raise RuntimeError("max retries exceeded")
 
 
-def _parse_confluence_date(s: str) -> datetime:
-    if not s:
+def _parse_confluence_date(val: str | int) -> datetime:
+    if not val:
         return datetime.now()
-    if len(s) >= 5 and s[-5] in "+-" and s[-4:].isdigit():
-        s = s[:-5] + s[-5:-2] + ":" + s[-2:]
-    return datetime.fromisoformat(s)
+    if isinstance(val, (int, float)):
+        return datetime.utcfromtimestamp(val / 1000)
+    if len(val) >= 5 and val[-5] in "+-" and val[-4:].isdigit():
+        val = val[:-5] + val[-5:-2] + ":" + val[-2:]
+    return datetime.fromisoformat(val)

@@ -110,7 +110,7 @@ class TestBitbucketActivityNormalization:
         assert event.id == "cloud:bitbucket:abc123def456"
         assert event.operation == "commit_pushed"
         assert event.category == "content"
-        assert event.object_type == "repo"
+        assert event.object_type == "commit"
         assert event.object_ref.name == "Fix login bug"
         assert event.object_ref.container == "web-frontend"
         assert event.actor_raw == "u1"
@@ -131,6 +131,7 @@ class TestBitbucketActivityNormalization:
             raw, "bitbucket", "cloud", "activity"
         )
         assert event.operation == "pull_request_merged"
+        assert event.object_type == "pull_request"
         assert event.object_ref.name == "Add feature X"
 
 

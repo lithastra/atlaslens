@@ -43,9 +43,10 @@ class JiraActivityConnector:
 
     async def fetch_activity(self, cursor: Cursor) -> list[RawEvent]:
         events: list[RawEvent] = []
-        jql = "ORDER BY updated DESC"
         if cursor:
             jql = f'updated >= "{cursor}" ORDER BY updated ASC'
+        else:
+            jql = "updated >= -30d ORDER BY updated DESC"
 
         next_token: str | None = None
         seen_tokens: set[str] = set()

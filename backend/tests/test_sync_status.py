@@ -33,13 +33,15 @@ async def test_sync_status_returns_connectors() -> None:
     assert resp.status_code == 200
     data = resp.json()
     assert isinstance(data, list)
-    assert len(data) >= 4
+    assert len(data) == 6
 
     ids = [s["connector"] for s in data]
-    assert "cloud:jira:audit" in ids
     assert "cloud:confluence:audit" in ids
-    assert "cloud:jsm:audit" in ids
     assert "cloud:bitbucket:audit" in ids
+    assert "cloud:jira:activity" in ids
+    assert "cloud:confluence:activity" in ids
+    assert "cloud:jsm:activity" in ids
+    assert "cloud:bitbucket:activity" in ids
 
 
 @pytest.mark.asyncio

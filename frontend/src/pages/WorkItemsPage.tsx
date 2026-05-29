@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useFilters } from '../context/FilterContext';
-import { getItems, getTop, type WorkItem, type TopItem } from '../api/client';
+import { getItems, getFilters, type WorkItem } from '../api/client';
 
 const PRODUCT_COLORS: Record<string, string> = {
   jira: '#2f6fed', confluence: '#00857a', bitbucket: '#5b4cc4', jsm: '#d9730d',
@@ -14,7 +14,7 @@ const SORT_OPTIONS = [
 
 export default function WorkItemsPage() {
   const { toParams } = useFilters();
-  const [actors, setActors] = useState<TopItem[]>([]);
+  const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
   const [selectedUser, setSelectedUser] = useState('');
   const [sort, setSort] = useState('updated_desc');
   const [items, setItems] = useState<WorkItem[]>([]);
@@ -22,9 +22,8 @@ export default function WorkItemsPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const params = toParams();
-    getTop({ ...params, field: 'actor', limit: '50' }).then(setActors);
-  }, [toParams]);
+    getFilters().then((f) => setUsers(f.users)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!selectedUser) {
@@ -56,8 +55,8 @@ export default function WorkItemsPage() {
               style={{ height: 34, border: '1px solid #e3e8f0', borderRadius: 8, padding: '0 8px', minWidth: 220 }}
             >
               <option value="">Select a user...</option>
-              {actors.map((a) => (
-                <option key={a.key} value={a.key}>{a.key} ({a.count})</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>{u.name}</option>
               ))}
             </select>
           </div>
@@ -113,7 +112,7 @@ export default function WorkItemsPage() {
                     <td style={{ fontWeight: 600 }}>{item.name}</td>
                     <td>
                       <span className="pdot" style={{ background: PRODUCT_COLORS[item.product] ?? '#999' }} />{' '}
-                      {item.object_type} ({item.product})
+                      {item.object_type.replace(/_/g, ' ')} ({item.product})
                     </td>
                     <td>
                       <span className="pill" style={{

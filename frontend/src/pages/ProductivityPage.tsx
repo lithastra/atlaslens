@@ -151,7 +151,7 @@ export default function ProductivityPage() {
                     <span className="pdot" style={{ background: PRODUCT_COLORS[e.product] ?? '#999' }} />{' '}
                     {e.product}
                   </td>
-                  <td>{e.actor_raw}</td>
+                  <td>{e.actor_display_name || e.actor_raw}</td>
                   <td><span className="op">{e.operation}</span></td>
                 </tr>
               ))}

@@ -12,6 +12,7 @@ from atlaslens.api.routes import (
     auth,
     events,
     exports,
+    filters,
     health,
     items,
     reports,
@@ -22,6 +23,7 @@ from atlaslens.db import close_db, connect_db, get_db
 from atlaslens.ingest.scheduler import run_all
 from atlaslens.reports.generator import run_scheduled_reports
 
+logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
 logger = logging.getLogger(__name__)
 
 _scheduler: AsyncIOScheduler | None = None
@@ -103,5 +105,6 @@ app.include_router(events.router)
 app.include_router(aggregations.router)
 app.include_router(items.router)
 app.include_router(exports.router)
+app.include_router(filters.router)
 app.include_router(reports.router)
 app.include_router(sync.router)

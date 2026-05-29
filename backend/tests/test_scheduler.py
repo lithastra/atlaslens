@@ -13,7 +13,10 @@ class TestScheduler:
         db = MockDB()
         with patch("atlaslens.ingest.scheduler.settings") as mock_settings:
             mock_settings.atlassian_site = ""
-            mock_settings.atlassian_api_token = ""
+            mock_settings.atlassian_cloud_id = ""
+            mock_settings.jira_api_token = ""
+            mock_settings.confluence_api_token = ""
+            mock_settings.bitbucket_api_token = ""
             mock_settings.atlassian_email = ""
             mock_settings.atlassian_org_id = ""
             results = await run_all_audit(db)  # type: ignore[arg-type]
@@ -27,11 +30,13 @@ class TestScheduler:
         db = MockDB()
         with patch("atlaslens.ingest.scheduler.settings") as mock_settings:
             mock_settings.atlassian_site = ""
-            mock_settings.atlassian_api_token = ""
+            mock_settings.atlassian_cloud_id = ""
+            mock_settings.jira_api_token = ""
+            mock_settings.confluence_api_token = ""
+            mock_settings.bitbucket_api_token = ""
             mock_settings.atlassian_email = ""
             mock_settings.atlassian_org_id = ""
             mock_settings.bitbucket_workspace = ""
-            mock_settings.bitbucket_app_password = ""
             results = await run_all_activity(db)  # type: ignore[arg-type]
 
         assert results == {}
@@ -71,10 +76,12 @@ class TestScheduler:
             ) as mock_run,
         ):
             mock_settings.atlassian_site = "mysite"
-            mock_settings.atlassian_api_token = "tok"
+            mock_settings.atlassian_cloud_id = "test-cloud-id"
+            mock_settings.jira_api_token = "jira-tok"
+            mock_settings.confluence_api_token = "conf-tok"
+            mock_settings.bitbucket_api_token = "bb-tok"
             mock_settings.atlassian_email = "a@b.com"
             mock_settings.bitbucket_workspace = "ws"
-            mock_settings.bitbucket_app_password = "pw"
             results = await run_all_activity(db)  # type: ignore[arg-type]
 
         assert results == {
@@ -107,10 +114,12 @@ class TestScheduler:
             ),
         ):
             mock_settings.atlassian_site = "mysite"
-            mock_settings.atlassian_api_token = "tok"
+            mock_settings.atlassian_cloud_id = "test-cloud-id"
+            mock_settings.jira_api_token = "jira-tok"
+            mock_settings.confluence_api_token = "conf-tok"
+            mock_settings.bitbucket_api_token = "bb-tok"
             mock_settings.atlassian_email = "a@b.com"
             mock_settings.bitbucket_workspace = ""
-            mock_settings.bitbucket_app_password = ""
             results = await run_all_activity(db)  # type: ignore[arg-type]
 
         assert call_count == 3

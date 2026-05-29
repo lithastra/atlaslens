@@ -19,7 +19,7 @@ async def timeseries(
     db: DB,
     _user: CurrentUser,
     granularity: str = Query("day", pattern="^(day|week)$"),
-    group_by: str = Query("category", pattern="^(category|product)$"),
+    group_by: str = Query("category", pattern="^(category|product|operation)$"),
     product: Annotated[list[str] | None, Query()] = None,
     category: str | None = None,
     severity: str | None = None,
@@ -88,11 +88,12 @@ async def timeseries(
 async def top(
     db: DB,
     _user: CurrentUser,
-    dimension: str = Query(
+    field: str = Query(
         "actor",
-        pattern="^(actor|project|space|repo)$",
+        alias="field",
+        pattern="^(actor|object|product|operation|project|space|repo)$",
     ),
-    n: int = Query(10, le=50),
+    n: int = Query(10, alias="limit", le=50),
     product: Annotated[list[str] | None, Query()] = None,
     category: str | None = None,
     severity: str | None = None,
@@ -111,11 +112,14 @@ async def top(
 
     field_map = {
         "actor": "$actor_id",
+        "object": "$object_ref.name",
+        "product": "$product",
+        "operation": "$operation",
         "project": "$object_ref.container",
         "space": "$object_ref.container",
         "repo": "$object_ref.container",
     }
-    group_field = field_map.get(dimension, "$actor_id")
+    group_field = field_map.get(field, "$actor_id")
 
     agg_pipeline: list[dict[str, Any]] = [
         {"$match": match},
@@ -127,14 +131,37 @@ async def top(
         },
         {"$sort": {"count": -1}},
         {"$limit": n},
-        {
+    ]
+
+    if field == "actor":
+        agg_pipeline.append({
+            "$lookup": {
+                "from": "identities",
+                "localField": "_id",
+                "foreignField": "_id",
+                "as": "_ident",
+            }
+        })
+        agg_pipeline.append({
+            "$project": {
+                "_id": 0,
+                "key": {
+                    "$ifNull": [
+                        {"$arrayElemAt": ["$_ident.display_name", 0]},
+                        "$_id",
+                    ]
+                },
+                "count": 1,
+            }
+        })
+    else:
+        agg_pipeline.append({
             "$project": {
                 "_id": 0,
                 "key": "$_id",
                 "count": 1,
             }
-        },
-    ]
+        })
 
     results: list[dict[str, Any]] = []
     doc: dict[str, Any]

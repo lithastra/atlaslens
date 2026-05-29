@@ -12,14 +12,16 @@ class Settings(BaseSettings):
     encryption_key: str = ""
 
     atlassian_site: str = ""
+    atlassian_cloud_id: str = ""
     atlassian_org_id: str = ""
     atlassian_email: str = ""
-    atlassian_api_token: str = ""
+    jira_api_token: str = ""
+    confluence_api_token: str = ""
+    bitbucket_api_token: str = ""
     atlassian_oauth_client_id: str = ""
     atlassian_oauth_client_secret: str = ""
 
     bitbucket_workspace: str = ""
-    bitbucket_app_password: str = ""
 
     cors_origins: list[str] = ["http://localhost:5173"]
 

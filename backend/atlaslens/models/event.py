@@ -19,6 +19,8 @@ ObjectType = Literal[
     "ticket",
     "page",
     "repo",
+    "commit",
+    "pull_request",
     "request",
     "user",
     "group",

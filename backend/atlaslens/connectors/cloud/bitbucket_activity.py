@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 
 import httpx
 
@@ -70,6 +70,9 @@ class BitbucketActivityConnector:
         self, repo: str, cursor: Cursor
     ) -> list[RawEvent]:
         events: list[RawEvent] = []
+        cutoff = cursor or (
+            datetime.now(UTC) - timedelta(days=30)
+        ).isoformat()
         next_url: str | None = (
             f"https://api.bitbucket.org/2.0/repositories/"
             f"{self._workspace}/{repo}/commits?pagelen={_PAGE_LEN}"
@@ -82,7 +85,7 @@ class BitbucketActivityConnector:
 
             for commit in values:
                 date_str = commit.get("date", "")
-                if cursor and date_str and date_str < cursor:
+                if date_str and date_str < cutoff:
                     return events
 
                 author = commit.get("author", {})
@@ -114,6 +117,9 @@ class BitbucketActivityConnector:
         self, repo: str, cursor: Cursor
     ) -> list[RawEvent]:
         events: list[RawEvent] = []
+        cutoff = cursor or (
+            datetime.now(UTC) - timedelta(days=30)
+        ).isoformat()
         next_url: str | None = (
             f"https://api.bitbucket.org/2.0/repositories/"
             f"{self._workspace}/{repo}/pullrequests"
@@ -128,7 +134,7 @@ class BitbucketActivityConnector:
 
             for pr in values:
                 updated = pr.get("updated_on", "")
-                if cursor and updated and updated < cursor:
+                if updated and updated < cutoff:
                     return events
 
                 author = pr.get("author", {})

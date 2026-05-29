@@ -43,6 +43,7 @@ export interface EventItem {
   deployment: string;
   pipeline: string;
   actor_id?: string;
+  actor_display_name?: string;
   actor_raw: string;
   operation: string;
   category: string;
@@ -118,6 +119,15 @@ export function getSummary(params: Record<string, string | string[]>) {
     else if (v) sp.append(k, v);
   }
   return request<Summary>(`/aggregations/summary?${sp}`);
+}
+
+export interface FilterOptions {
+  users: { id: string; name: string }[];
+  operations: string[];
+}
+
+export function getFilters() {
+  return request<FilterOptions>('/filters');
 }
 
 export interface WorkItem {

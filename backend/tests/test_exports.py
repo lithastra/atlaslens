@@ -53,6 +53,9 @@ def _setup(db: _MockDB) -> None:
             "disabled": False,
         }
     )
+    db["identities"].find = lambda *a, **kw: _AsyncIter(
+        [{"_id": "person:001", "display_name": "Alice Smith"}]
+    )
 
 
 def _auth() -> dict[str, str]:
@@ -102,6 +105,7 @@ class TestExportEndpoint:
         rows = list(reader)
         assert len(rows) == 5
         assert rows[0]["id"] == "cloud:jira:evt-0"
+        assert rows[0]["actor_display_name"] == "Alice Smith"
 
     def test_integrity_stamp_present(self) -> None:
         db = _MockDB()
@@ -182,6 +186,42 @@ class TestExportEndpoint:
         assert "application/pdf" in resp.headers["content-type"]
         assert resp.content[:5] == b"%PDF-"
         assert len(resp.content) > 500
+
+    def test_pdf_export_with_null_fields(self) -> None:
+        # Activity events have null source_ip / container; the PDF
+        # renderer must not choke on None (regression for 500 error).
+        events = [
+            {
+                "_id": "cloud:bitbucket:c1",
+                "occurred_at": datetime(2026, 4, 20, 10, 0, tzinfo=UTC),
+                "product": "bitbucket",
+                "deployment": "cloud",
+                "pipeline": "activity",
+                "actor_id": None,
+                "actor_raw": "u1",
+                "operation": "commit_pushed",
+                "category": "content",
+                "severity": "low",
+                "object_type": "commit",
+                "object_ref": {
+                    "id": "abc",
+                    "name": "fix bug",
+                    "container": None,
+                },
+                "source_ip": None,
+            }
+        ]
+        db = _MockDB()
+        _setup(db)
+        db["events"].find = lambda *a, **kw: _AsyncIter(events)
+
+        app.dependency_overrides[get_database] = lambda: db
+        client = TestClient(app, raise_server_exceptions=False)
+        resp = client.post("/exports?format=pdf", headers=_auth())
+        app.dependency_overrides.clear()
+
+        assert resp.status_code == 200
+        assert resp.content[:5] == b"%PDF-"
 
 
 class TestVerifyCli:

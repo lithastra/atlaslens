@@ -224,7 +224,7 @@ class TestBitbucketActivityConnector:
                         "values": [
                             {
                                 "hash": "abc123def456",
-                                "date": "2026-04-20T10:00:00+00:00",
+                                "date": "2026-05-20T10:00:00+00:00",
                                 "message": "Fix bug",
                                 "author": {
                                     "raw": "Alice <a@x.com>",
@@ -269,7 +269,7 @@ class TestBitbucketActivityConnector:
                             {
                                 "id": 42,
                                 "title": "Add feature",
-                                "updated_on": "2026-04-20T10:00:00+00:00",
+                                "updated_on": "2026-05-20T10:00:00+00:00",
                                 "state": "MERGED",
                                 "author": {
                                     "account_id": "u1",

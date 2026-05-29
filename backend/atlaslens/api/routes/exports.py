@@ -29,6 +29,7 @@ _CSV_FIELDS = [
     "deployment",
     "pipeline",
     "actor_id",
+    "actor_display_name",
     "actor_raw",
     "operation",
     "category",
@@ -43,7 +44,7 @@ _CSV_FIELDS = [
 _PDF_COLUMNS = [
     "occurred_at",
     "product",
-    "actor_raw",
+    "actor_display_name",
     "operation",
     "category",
     "severity",
@@ -51,6 +52,15 @@ _PDF_COLUMNS = [
     "object_ref_name",
     "source_ip",
 ]
+
+# Friendlier PDF column headers than the auto-titled field names.
+_PDF_HEADERS = {
+    "occurred_at": "Time (UTC)",
+    "actor_display_name": "User",
+    "object_type": "Type",
+    "object_ref_name": "Title",
+    "source_ip": "Source IP",
+}
 
 
 async def _build_match(
@@ -123,6 +133,8 @@ async def export_events(
         rows.append(_flatten(doc))
         hasher.update(str(doc["_id"]).encode())
 
+    await _resolve_display_names(db, rows)
+
     generated_at = datetime.now(UTC).isoformat()
 
     if fmt == "pdf":
@@ -188,7 +200,10 @@ def _render_pdf(
     ))
     elements.append(Spacer(1, 8 * mm))
 
-    header = [c.replace("_", " ").title() for c in _PDF_COLUMNS]
+    header = [
+        _PDF_HEADERS.get(c, c.replace("_", " ").title())
+        for c in _PDF_COLUMNS
+    ]
     table_data: list[list[str]] = [header]
     for row in rows:
         table_data.append([
@@ -223,7 +238,34 @@ def _render_pdf(
 
 
 def _truncate(s: str, max_len: int) -> str:
+    s = s or ""
     return s if len(s) <= max_len else s[: max_len - 1] + "…"
+
+
+async def _resolve_display_names(
+    db: AsyncIOMotorDatabase,
+    rows: list[dict[str, str]],
+) -> None:
+    """Fill actor_display_name from the identities collection.
+
+    actor_raw is an opaque accountId; the human-readable name lives on
+    the resolved identity. Falls back to "" when unresolved.
+    """
+    actor_ids = {r["actor_id"] for r in rows if r.get("actor_id")}
+    if not actor_ids:
+        return
+    name_map: dict[str, str] = {}
+    doc: dict[str, Any]
+    async for doc in db["identities"].find(
+        {"_id": {"$in": list(actor_ids)}},
+        {"display_name": 1},
+    ):
+        if doc.get("display_name"):
+            name_map[doc["_id"]] = doc["display_name"]
+    for row in rows:
+        aid = row.get("actor_id")
+        if aid and aid in name_map:
+            row["actor_display_name"] = name_map[aid]
 
 
 def _flatten(doc: dict[str, Any]) -> dict[str, str]:
@@ -232,13 +274,14 @@ def _flatten(doc: dict[str, Any]) -> dict[str, str]:
     if isinstance(occurred, datetime):
         occurred = occurred.isoformat()
 
-    return {
+    flat: dict[str, Any] = {
         "id": doc.get("_id", ""),
         "occurred_at": occurred,
         "product": doc.get("product", ""),
         "deployment": doc.get("deployment", ""),
         "pipeline": doc.get("pipeline", ""),
         "actor_id": doc.get("actor_id", ""),
+        "actor_display_name": "",
         "actor_raw": doc.get("actor_raw", ""),
         "operation": doc.get("operation", ""),
         "category": doc.get("category", ""),
@@ -249,3 +292,6 @@ def _flatten(doc: dict[str, Any]) -> dict[str, str]:
         "object_ref_container": obj_ref.get("container", ""),
         "source_ip": doc.get("source_ip", ""),
     }
+    # Nullable fields (source_ip, container, unresolved actor_id) come
+    # back as None; coerce so csv/pdf rendering never sees a None.
+    return {k: ("" if v is None else str(v)) for k, v in flat.items()}

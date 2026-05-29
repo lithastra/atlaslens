@@ -47,12 +47,13 @@ class JsmActivityConnector:
             keys = ", ".join(self._projects)
             project_clause = f"project in ({keys}) AND "
 
-        jql = f"{project_clause}ORDER BY updated DESC"
         if cursor:
             jql = (
                 f'{project_clause}updated >= "{cursor}" '
                 f"ORDER BY updated ASC"
             )
+        else:
+            jql = f"{project_clause}updated >= -30d ORDER BY updated DESC"
 
         next_token: str | None = None
         seen_tokens: set[str] = set()

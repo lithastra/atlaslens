@@ -32,6 +32,9 @@ async def list_items(
     match: dict[str, Any] = {
         "pipeline": "activity",
         "$or": [{"actor_id": actor}, {"actor_raw": actor}],
+        # Exclude nameless sub-events (e.g. Jira changelog entries
+        # "KEY-cl-<id>"): they are timeline noise, not work items.
+        "object_ref.name": {"$nin": [None, ""]},
     }
 
     if product:
@@ -48,18 +51,40 @@ async def list_items(
         if d:
             match["occurred_at"] = d
 
+    # A JSM request is the same underlying Jira issue (identical key),
+    # ingested by both the Jira and JSM connectors. Merge jira+jsm that
+    # share a key so the item appears once; key other products by product
+    # so unrelated objects (e.g. Bitbucket PR #134 vs a Jira key) never
+    # collapse together.
+    merge_key = {
+        "$cond": [
+            {"$in": ["$product", ["jira", "jsm"]]},
+            {"$toString": "$object_ref.id"},
+            {
+                "$concat": [
+                    "$product",
+                    ":",
+                    {"$toString": "$object_ref.id"},
+                ]
+            },
+        ]
+    }
+
     agg: list[dict[str, Any]] = [
         {"$match": match},
+        {"$addFields": {"_merge_key": merge_key}},
+        # Sort by product so $first picks the Jira ("jira" < "jsm")
+        # document for a merged pair — product and object_type stay
+        # consistent with each other.
+        {"$sort": {"product": 1}},
         {
             "$group": {
-                "_id": {
-                    "product": "$product",
-                    "object_id": "$object_ref.id",
-                },
-                "name": {"$last": "$object_ref.name"},
-                "container": {"$last": "$object_ref.container"},
-                "object_type": {"$last": "$object_type"},
-                "product": {"$last": "$product"},
+                "_id": "$_merge_key",
+                "object_id": {"$first": "$object_ref.id"},
+                "name": {"$first": "$object_ref.name"},
+                "container": {"$first": "$object_ref.container"},
+                "object_type": {"$first": "$object_type"},
+                "product": {"$first": "$product"},
                 "updated_at": {"$max": "$occurred_at"},
                 "created": {
                     "$sum": {
@@ -102,7 +127,7 @@ async def list_items(
                     {
                         "$project": {
                             "_id": 0,
-                            "object_id": "$_id.object_id",
+                            "object_id": 1,
                             "product": 1,
                             "name": 1,
                             "container": 1,

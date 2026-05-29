@@ -7,5 +7,6 @@ node_modules
 frontend/dist
 frontend/node_modules
 *.md
+!README.md
 *.docx
 *.html

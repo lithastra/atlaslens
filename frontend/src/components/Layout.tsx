@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import { Outlet, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useFilters } from '../context/FilterContext';
+import { getFilters, type FilterOptions } from '../api/client';
 
 const PRODUCTS = [
   { id: 'jira', name: 'Jira', color: '#2f6fed' },
@@ -42,6 +44,11 @@ function initials(name: string): string {
 export default function Layout() {
   const { user, logout } = useAuth();
   const { filters, setFilter, resetFilters } = useFilters();
+  const [filterOpts, setFilterOpts] = useState<FilterOptions>({ users: [], operations: [] });
+
+  useEffect(() => {
+    getFilters().then(setFilterOpts).catch(() => {});
+  }, []);
 
   const toggleProduct = (id: string) => {
     const current = filters.products;
@@ -202,16 +209,9 @@ export default function Layout() {
               onChange={(e) => setFilter('user', e.target.value)}
             >
               <option value="">All users</option>
-            </select>
-          </div>
-
-          <div className="filter">
-            <label className="flabel">Group / team</label>
-            <select
-              value={filters.group}
-              onChange={(e) => setFilter('group', e.target.value)}
-            >
-              <option value="">All groups</option>
+              {filterOpts.users.map((u) => (
+                <option key={u.id} value={u.id}>{u.name}</option>
+              ))}
             </select>
           </div>
 
@@ -222,6 +222,9 @@ export default function Layout() {
               onChange={(e) => setFilter('operation', e.target.value)}
             >
               <option value="">All operations</option>
+              {filterOpts.operations.map((op) => (
+                <option key={op} value={op}>{op.replace(/_/g, ' ')}</option>
+              ))}
             </select>
           </div>
 
