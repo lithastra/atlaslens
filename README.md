@@ -61,6 +61,10 @@ git commit -s -m "Your commit message"
 
 Licensed under the [Apache License, Version 2.0](LICENSE).
 
+## Support
+
+If AtlasLens is useful to you, you can support its development: [buy me a coffee](https://buymeacoffee.com/lithastra) ☕
+
 ## Disclaimer
 
 AtlasLens is **not affiliated with, endorsed by, or sponsored by Atlassian.**
