@@ -10,7 +10,7 @@ A local, admin-only web dashboard that continuously pulls **audit** and **activi
 - **Filtering & aggregation** — by product, date, user, group, operation, category, severity
 - **Work items view** — per-person list of tickets, PRs, and pages with deep links
 - **Compliance exports** — CSV/PDF with integrity stamps (count, SHA-256, filter criteria, timestamp)
-- **Field-level encryption** — personal identifiers (names, emails) encrypted at rest
+- **Field-level encryption** — email identifiers encrypted at rest (display names kept plaintext for query/aggregation; see [COMPLIANCE.md](COMPLIANCE.md))
 - **1-year retention** — enforced by MongoDB TTL index
 
 ## Tech Stack
