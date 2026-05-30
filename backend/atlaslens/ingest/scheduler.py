@@ -8,7 +8,9 @@ from atlaslens.connectors.cloud.bitbucket import BitbucketCloudConnector
 from atlaslens.connectors.cloud.bitbucket_activity import BitbucketActivityConnector
 from atlaslens.connectors.cloud.confluence import ConfluenceCloudConnector
 from atlaslens.connectors.cloud.confluence_activity import ConfluenceActivityConnector
+from atlaslens.connectors.cloud.jira import JiraCloudConnector
 from atlaslens.connectors.cloud.jira_activity import JiraActivityConnector
+from atlaslens.connectors.cloud.jsm import JsmCloudConnector
 from atlaslens.connectors.cloud.jsm_activity import JsmActivityConnector
 from atlaslens.connectors.rate_budget import RateBudget
 from atlaslens.ingest.runner import run_connector
@@ -21,6 +23,7 @@ async def run_all_audit(
 ) -> dict[str, int | str]:
     results: dict[str, int | str] = {}
     cloud_id = settings.atlassian_cloud_id
+    jira_base = f"https://api.atlassian.com/ex/jira/{cloud_id}"
     confluence_base = f"https://api.atlassian.com/ex/confluence/{cloud_id}"
 
     budget = RateBudget(max_requests_per_minute=30, max_requests_per_cycle=500)
@@ -28,11 +31,29 @@ async def run_all_audit(
     async with httpx.AsyncClient() as client:
         connectors: list[tuple[str, object]] = []
 
+        if cloud_id and settings.jira_api_token:
+            jira_auth = (settings.atlassian_email, settings.jira_api_token)
+            # Jira audit-log endpoint also backs JSM; jira:audit excludes
+            # JSM-sourced records and jsm:audit ingests only those.
+            connectors.append((
+                "jira:audit",
+                JiraCloudConnector(jira_base, jira_auth, client, budget),
+            ))
+            connectors.append((
+                "jsm:audit",
+                JsmCloudConnector(jira_base, jira_auth, client, budget),
+            ))
+
         if cloud_id and settings.confluence_api_token:
-            confluence_auth = (settings.atlassian_email, settings.confluence_api_token)
+            confluence_auth = (
+                settings.atlassian_email,
+                settings.confluence_api_token,
+            )
             connectors.append((
                 "confluence:audit",
-                ConfluenceCloudConnector(confluence_base, confluence_auth, client, budget),
+                ConfluenceCloudConnector(
+                    confluence_base, confluence_auth, client, budget
+                ),
             ))
 
         connectors.append(("bitbucket:audit", BitbucketCloudConnector()))

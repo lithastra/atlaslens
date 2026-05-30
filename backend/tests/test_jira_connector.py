@@ -58,6 +58,29 @@ class TestJiraCloudConnector:
         assert events[2].source_id == "2"
 
     @pytest.mark.asyncio
+    async def test_fetch_audit_excludes_jsm_sourced(self) -> None:
+        # JSM-sourced records belong to the jsm:audit pipeline and must
+        # not be double-counted by the Jira connector.
+        records = [
+            _record(0, summary="jira event"),
+            {**_record(1), "eventSource": "JSM"},
+            {**_record(2), "eventSource": "Jira Service Management"},
+        ]
+        transport = httpx.MockTransport(
+            lambda req: httpx.Response(200, json=_audit_response(records))
+        )
+        async with httpx.AsyncClient(transport=transport) as client:
+            connector = JiraCloudConnector(
+                base_url="https://test.atlassian.net",
+                auth=("e@x.com", "tok"),
+                client=client,
+            )
+            events = await connector.fetch_audit(None)
+
+        assert len(events) == 1
+        assert events[0].source_id == "0"
+
+    @pytest.mark.asyncio
     async def test_fetch_audit_with_cursor(self) -> None:
         captured_params: list[dict] = []  # type: ignore[type-arg]
 

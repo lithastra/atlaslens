@@ -12,6 +12,8 @@ DB = Annotated[
 ]
 
 _CONNECTORS = [
+    {"id": "cloud:jira:audit", "product": "jira", "deployment": "cloud"},
+    {"id": "cloud:jsm:audit", "product": "jsm", "deployment": "cloud"},
     {
         "id": "cloud:confluence:audit",
         "product": "confluence",

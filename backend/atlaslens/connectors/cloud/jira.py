@@ -53,6 +53,13 @@ class JiraCloudConnector:
             records: list[dict[str, Any]] = data.get("records", [])
 
             for record in records:
+                event_source = (
+                    record.get("eventSource", "").lower().strip()
+                )
+                if event_source in ("jsm", "jira service management"):
+                    # JSM-sourced records are ingested by the jsm:audit
+                    # pipeline; skip here to avoid double-counting.
+                    continue
                 events.append(
                     RawEvent(
                         source_id=str(record["id"]),
