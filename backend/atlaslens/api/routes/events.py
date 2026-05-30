@@ -224,7 +224,7 @@ async def _resolve_actor_names(
         return
     name_map: dict[str, str] = {}
     doc: dict[str, Any]
-    async for doc in db["identities"].find(  # type: ignore[attr-defined]
+    async for doc in db["identities"].find(
         {"_id": {"$in": list(actor_ids)}},
         {"display_name": 1},
     ):

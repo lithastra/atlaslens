@@ -124,6 +124,7 @@ export function getSummary(params: Record<string, string | string[]>) {
 export interface FilterOptions {
   users: { id: string; name: string }[];
   operations: string[];
+  groups: { id: string; name: string }[];
 }
 
 export function getFilters() {

@@ -57,10 +57,19 @@ class TestScheduler:
                 new_callable=AsyncMock,
                 return_value={"jira:activity": 3},
             ),
+            patch(
+                "atlaslens.ingest.scheduler.run_group_sync",
+                new_callable=AsyncMock,
+                return_value={"groups:sync": 2},
+            ),
         ):
             results = await run_all(db)  # type: ignore[arg-type]
 
-        assert results == {"jira:audit": 5, "jira:activity": 3}
+        assert results == {
+            "jira:audit": 5,
+            "jira:activity": 3,
+            "groups:sync": 2,
+        }
 
     @pytest.mark.asyncio
     async def test_run_all_activity_with_credentials(self) -> None:

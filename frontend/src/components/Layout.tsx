@@ -44,7 +44,7 @@ function initials(name: string): string {
 export default function Layout() {
   const { user, logout } = useAuth();
   const { filters, setFilter, resetFilters } = useFilters();
-  const [filterOpts, setFilterOpts] = useState<FilterOptions>({ users: [], operations: [] });
+  const [filterOpts, setFilterOpts] = useState<FilterOptions>({ users: [], operations: [], groups: [] });
 
   useEffect(() => {
     getFilters().then(setFilterOpts).catch(() => {});
@@ -214,6 +214,21 @@ export default function Layout() {
               ))}
             </select>
           </div>
+
+          {filterOpts.groups.length > 0 && (
+            <div className="filter">
+              <label className="flabel">Group / team</label>
+              <select
+                value={filters.group}
+                onChange={(e) => setFilter('group', e.target.value)}
+              >
+                <option value="">All groups</option>
+                {filterOpts.groups.map((g) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="filter">
             <label className="flabel">Operation</label>

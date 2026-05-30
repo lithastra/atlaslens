@@ -13,6 +13,7 @@ from atlaslens.connectors.cloud.jira_activity import JiraActivityConnector
 from atlaslens.connectors.cloud.jsm import JsmCloudConnector
 from atlaslens.connectors.cloud.jsm_activity import JsmActivityConnector
 from atlaslens.connectors.rate_budget import RateBudget
+from atlaslens.ingest.group_sync import sync_groups
 from atlaslens.ingest.runner import run_connector
 
 logger = logging.getLogger(__name__)
@@ -133,10 +134,31 @@ async def run_all_activity(
     return results
 
 
+async def run_group_sync(
+    db: AsyncIOMotorDatabase,
+) -> dict[str, int | str]:
+    cloud_id = settings.atlassian_cloud_id
+    if not (cloud_id and settings.jira_api_token):
+        return {}
+    jira_base = f"https://api.atlassian.com/ex/jira/{cloud_id}"
+    auth = (settings.atlassian_email, settings.jira_api_token)
+    async with httpx.AsyncClient() as client:
+        try:
+            res = await sync_groups(db, jira_base, auth, client)
+            return {
+                "groups:sync": res["groups"],
+                "groups:memberships": res["memberships"],
+            }
+        except Exception as exc:
+            logger.error("group sync failed: %s", exc)
+            return {"groups:sync": f"error: {exc}"}
+
+
 async def run_all(
     db: AsyncIOMotorDatabase,
 ) -> dict[str, int | str]:
     results: dict[str, int | str] = {}
     results.update(await run_all_audit(db))
     results.update(await run_all_activity(db))
+    results.update(await run_group_sync(db))
     return results
