@@ -40,12 +40,35 @@ cd frontend && npm install && npm run dev
 
 Copy `.env.example` to `.env` and fill in your Atlassian credentials before running.
 
-## Known Gaps (No Atlassian Guard)
+## Status
 
-This tool is designed for environments **without** an Atlassian Guard (Access) subscription. Two data sources are unavailable without Guard:
+All planned phases (P0–P7) are implemented and verified against live data.
+
+| Area | Status |
+|---|---|
+| Audit pipeline — Jira, Confluence, JSM | ✅ Ingesting |
+| Activity pipeline — Jira, Confluence, Bitbucket, JSM | ✅ Ingesting |
+| Incremental sync — watermarks + idempotent upserts | ✅ |
+| Identity resolution — accountId → person, cross-product | ✅ |
+| Group / canonical-team resolution + membership | ✅ |
+| Query API + JWT auth + admin seeding (CLI) | ✅ |
+| Dashboard — Overview, Productivity, Security, Timeline, Work Items, Reports, Health | ✅ |
+| CSV / PDF exports with integrity stamp | ✅ |
+| Compliance — 1-year TTL, email encryption, append-only, bcrypt | ✅ (see [COMPLIANCE.md](COMPLIANCE.md)) |
+
+## Known Gaps & Out of Scope
+
+These data sources are surfaced honestly in the UI rather than faked.
+
+**Unavailable without Atlassian Guard (Access):**
 
 - **Bitbucket Cloud audit logs** — the audit-log API requires Guard. Bitbucket contributes *activity data only* (commits, PRs).
 - **Cloud sign-in events** — authentication/login events require Guard. The Security view surfaces this gap explicitly.
+
+**Out of scope (no available environment / credential):**
+
+- **Data Center connectors** — require a Data Center instance; this build is Cloud-only. The adapter layer leaves room to add them later.
+- **Org-events audit** — requires an Atlassian Organization API key (Bearer), which is not provisioned.
 
 ## Contributing
 
