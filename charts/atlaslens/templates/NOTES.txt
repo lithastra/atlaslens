@@ -1,0 +1,33 @@
+AtlasLens {{ .Chart.AppVersion }} has been deployed as release "{{ .Release.Name }}".
+
+1. Seed an admin account (no self-service registration by design):
+
+   kubectl -n {{ .Release.Namespace }} exec deploy/{{ include "atlaslens.fullname" . }}-backend -- \
+     python -m atlaslens.cli.seed_admin --username admin
+
+2. Reach the dashboard:
+{{- if eq .Values.frontend.service.type "NodePort" }}
+
+   It is exposed on NodePort {{ .Values.frontend.service.nodePort }}:
+     http://<node-ip>:{{ .Values.frontend.service.nodePort }}
+{{- else if eq .Values.frontend.service.type "LoadBalancer" }}
+
+   Wait for the LoadBalancer IP:
+     kubectl -n {{ .Release.Namespace }} get svc {{ include "atlaslens.fullname" . }}-frontend -w
+{{- else }}
+
+   Port-forward the frontend service:
+     kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "atlaslens.fullname" . }}-frontend 8080:{{ .Values.frontend.service.port }}
+     open http://localhost:8080
+{{- end }}
+
+{{- if not .Values.secrets.existingSecret }}
+{{- if not .Values.secrets.encryptionKey }}
+
+WARNING: secrets.encryptionKey is empty. Field-level encryption of personal
+identifiers (APPI/§12) requires a Fernet key. Set secrets.encryptionKey and
+secrets.jwtSecret before exposing this to real data.
+{{- end }}
+{{- end }}
+
+Health:  kubectl -n {{ .Release.Namespace }} get pods -l app.kubernetes.io/instance={{ .Release.Name }}

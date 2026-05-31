@@ -1,0 +1,111 @@
+# Default values for the AtlasLens Helm chart.
+# Override with `--set key=value` or a custom `-f values-prod.yaml`.
+
+# -- Override the chart's generated name (defaults to the chart name).
+nameOverride: ""
+# -- Override the fully-qualified release name.
+fullnameOverride: ""
+
+# Non-secret application configuration. Rendered into a ConfigMap and exposed
+# to the backend via envFrom. Mongo URI is templated to the in-chart service
+# when `mongodb.enabled` is true (see backend deployment).
+config:
+  mongoDb: "atlaslens"
+  # Atlassian site/tenant identifiers (non-secret).
+  atlassianSite: ""
+  atlassianCloudId: ""
+  atlassianOrgId: ""
+  bitbucketWorkspace: ""
+  # Allowed CORS origins for the API, as a JSON array string.
+  corsOrigins: '["http://localhost:30080"]'
+  # Incremental ingestion interval in minutes (APScheduler).
+  ingestIntervalMinutes: "15"
+  # Mongo connection URI. Leave empty to auto-target the in-chart MongoDB
+  # service; set explicitly to use an external/managed MongoDB.
+  mongoUri: ""
+
+# Secrets. By default the chart creates a Secret from the values below.
+# IMPORTANT: do NOT commit real tokens into a values file. Supply them at
+# install time (`--set-string secrets.jiraApiToken=...` or a local, ignored
+# values file), or point `existingSecret` at a Secret you manage out-of-band.
+secrets:
+  # If set, the chart will NOT create a Secret and will instead read keys from
+  # this pre-existing Secret. Expected keys: jwt-secret, encryption-key,
+  # atlassian-email, jira-api-token, confluence-api-token, bitbucket-api-token,
+  # atlassian-oauth-client-id, atlassian-oauth-client-secret.
+  existingSecret: ""
+  # Used only when existingSecret is empty.
+  jwtSecret: ""
+  encryptionKey: ""
+  atlassianEmail: ""
+  jiraApiToken: ""
+  confluenceApiToken: ""
+  bitbucketApiToken: ""
+  atlassianOauthClientId: ""
+  atlassianOauthClientSecret: ""
+
+backend:
+  replicaCount: 1
+  image:
+    repository: atlaslens-backend
+    tag: ""            # defaults to .Chart.AppVersion when empty
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8000
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 1Gi
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+frontend:
+  replicaCount: 1
+  image:
+    repository: atlaslens-frontend
+    tag: ""            # defaults to .Chart.AppVersion when empty
+    pullPolicy: IfNotPresent
+  service:
+    # ClusterIP | NodePort | LoadBalancer
+    type: NodePort
+    port: 80
+    # Only used when type is NodePort.
+    nodePort: 30080
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+  podAnnotations: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# In-chart MongoDB (single small instance — enough for ~2–4M events/yr).
+# Disable and set config.mongoUri to use an external MongoDB.
+mongodb:
+  enabled: true
+  image:
+    repository: mongo
+    tag: "7"
+    pullPolicy: IfNotPresent
+  service:
+    port: 27017
+  persistence:
+    enabled: true
+    size: 2Gi
+    # storageClass: ""   # uncomment to pin a StorageClass
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+imagePullSecrets: []

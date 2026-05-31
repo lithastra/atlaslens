@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "atlaslens.configMapName" . }}
+  labels:
+    {{- include "atlaslens.labels" . | nindent 4 }}
+data:
+  ATLASLENS_MONGO_URI: {{ include "atlaslens.mongoUri" . | quote }}
+  ATLASLENS_MONGO_DB: {{ .Values.config.mongoDb | quote }}
+  ATLASLENS_ATLASSIAN_SITE: {{ .Values.config.atlassianSite | quote }}
+  ATLASLENS_ATLASSIAN_CLOUD_ID: {{ .Values.config.atlassianCloudId | quote }}
+  ATLASLENS_ATLASSIAN_ORG_ID: {{ .Values.config.atlassianOrgId | quote }}
+  ATLASLENS_BITBUCKET_WORKSPACE: {{ .Values.config.bitbucketWorkspace | quote }}
+  ATLASLENS_CORS_ORIGINS: {{ .Values.config.corsOrigins | quote }}
+  ATLASLENS_INGEST_INTERVAL_MINUTES: {{ .Values.config.ingestIntervalMinutes | quote }}

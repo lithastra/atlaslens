@@ -1,0 +1,73 @@
+{{- if .Values.mongodb.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "atlaslens.mongoServiceName" . }}
+  labels:
+    {{- include "atlaslens.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mongodb
+spec:
+  clusterIP: None
+  selector:
+    app.kubernetes.io/name: {{ include "atlaslens.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: mongodb
+  ports:
+    - name: mongo
+      port: {{ .Values.mongodb.service.port }}
+      targetPort: 27017
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "atlaslens.mongoServiceName" . }}
+  labels:
+    {{- include "atlaslens.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mongodb
+spec:
+  serviceName: {{ include "atlaslens.mongoServiceName" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "atlaslens.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: mongodb
+  template:
+    metadata:
+      labels:
+        {{- include "atlaslens.labels" . | nindent 8 }}
+        app.kubernetes.io/component: mongodb
+    spec:
+      containers:
+        - name: mongo
+          image: "{{ .Values.mongodb.image.repository }}:{{ .Values.mongodb.image.tag }}"
+          imagePullPolicy: {{ .Values.mongodb.image.pullPolicy }}
+          ports:
+            - name: mongo
+              containerPort: 27017
+          {{- if .Values.mongodb.persistence.enabled }}
+          volumeMounts:
+            - name: data
+              mountPath: /data/db
+          {{- end }}
+          resources:
+            {{- toYaml .Values.mongodb.resources | nindent 12 }}
+      {{- if not .Values.mongodb.persistence.enabled }}
+      volumes:
+        - name: data
+          emptyDir: {}
+      {{- end }}
+  {{- if .Values.mongodb.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        {{- with .Values.mongodb.persistence.storageClass }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.mongodb.persistence.size }}
+  {{- end }}
+{{- end }}

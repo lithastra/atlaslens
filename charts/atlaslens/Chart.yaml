@@ -1,0 +1,21 @@
+apiVersion: v2
+name: atlaslens
+description: Local, admin-only audit & activity dashboard for the Atlassian suite (Jira, Confluence, Bitbucket, JSM).
+type: application
+# Chart version — bump on any chart change.
+version: 1.0.0
+# Version of the AtlasLens application packaged by this chart.
+appVersion: "1.0.0"
+home: https://github.com/lithastra/atlaslens
+sources:
+  - https://github.com/lithastra/atlaslens
+keywords:
+  - atlassian
+  - audit
+  - jira
+  - confluence
+  - bitbucket
+  - jsm
+  - dashboard
+maintainers:
+  - name: lithastra

@@ -40,6 +40,28 @@ cd frontend && npm install && npm run dev
 
 Copy `.env.example` to `.env` and fill in your Atlassian credentials before running.
 
+## Deploy on Kubernetes (Helm)
+
+A Helm chart is provided in [`charts/atlaslens`](charts/atlaslens). It deploys the backend, frontend, and an optional single-node MongoDB.
+
+```bash
+# From the packaged release asset:
+helm install atlaslens \
+  https://github.com/lithastra/atlaslens/releases/download/v1.0.0/atlaslens-1.0.0.tgz \
+  --namespace atlaslens --create-namespace -f my-values.yaml
+
+# …or from a checkout:
+helm install atlaslens ./charts/atlaslens --namespace atlaslens --create-namespace -f my-values.yaml
+```
+
+Pass Atlassian tokens and the encryption/JWT secrets at install time (never commit them) or point `secrets.existingSecret` at a Secret you manage. After install, seed an admin:
+
+```bash
+kubectl -n atlaslens exec deploy/atlaslens-backend -- python -m atlaslens.cli.seed_admin --username admin
+```
+
+See the [chart README](charts/atlaslens/README.md) for all values and secret handling.
+
 ## Status
 
 All planned phases (P0–P7) are implemented and verified against live data.
