@@ -42,12 +42,12 @@ Copy `.env.example` to `.env` and fill in your Atlassian credentials before runn
 
 ## Deploy on Kubernetes (Helm)
 
-A Helm chart is provided in [`charts/atlaslens`](charts/atlaslens). It deploys the backend, frontend, and an optional single-node MongoDB.
+A Helm chart is provided in [`charts/atlaslens`](charts/atlaslens). It deploys the backend, frontend, and an optional single-node MongoDB. Tagged releases are published to GHCR as an OCI artifact by the [release workflow](.github/workflows/release-chart.yml).
 
 ```bash
-# From the packaged release asset:
-helm install atlaslens \
-  https://github.com/lithastra/atlaslens/releases/download/v1.0.0/atlaslens-1.0.0.tgz \
+# From GHCR (published on each v* tag):
+helm install atlaslens oci://ghcr.io/lithastra/charts/atlaslens \
+  --version 1.0.0 \
   --namespace atlaslens --create-namespace -f my-values.yaml
 
 # …or from a checkout:

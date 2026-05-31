@@ -17,8 +17,9 @@ the FastAPI backend, the React/nginx frontend, and an optional single-node Mongo
 ## Install
 
 ```bash
-# From the release asset:
-helm install atlaslens https://github.com/lithastra/atlaslens/releases/download/v1.0.0/atlaslens-1.0.0.tgz \
+# From GHCR (published on each v* tag by .github/workflows/release-chart.yml):
+helm install atlaslens oci://ghcr.io/lithastra/charts/atlaslens \
+  --version 1.0.0 \
   --namespace atlaslens --create-namespace \
   -f my-values.yaml
 
