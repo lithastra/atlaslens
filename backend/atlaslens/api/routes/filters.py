@@ -12,11 +12,25 @@ CurrentUser = Annotated[dict[str, Any], Depends(get_current_user)]
 
 
 @router.get("/filters")
-async def get_filters(db: DB, _user: CurrentUser) -> dict[str, Any]:
+async def get_filters(
+    db: DB,
+    _user: CurrentUser,
+    group: str | None = None,
+) -> dict[str, Any]:
+    # When a group is selected, restrict the user list to its resolved
+    # members so the User dropdown respects the chosen team.
+    user_query: dict[str, Any] = {"display_name": {"$ne": ""}}
+    if group:
+        member_ids: list[str] = await db["group_membership"].distinct(
+            "identity_id",
+            {"canonical_group_id": group},
+        )
+        user_query["_id"] = {"$in": member_ids}
+
     users: list[dict[str, str]] = []
     doc: dict[str, Any]
     async for doc in db["identities"].find(
-        {"display_name": {"$ne": ""}},
+        user_query,
         {"display_name": 1},
     ).sort("display_name", 1):
         users.append({"id": doc["_id"], "name": doc["display_name"]})

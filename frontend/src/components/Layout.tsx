@@ -47,8 +47,18 @@ export default function Layout() {
   const [filterOpts, setFilterOpts] = useState<FilterOptions>({ users: [], operations: [], groups: [] });
 
   useEffect(() => {
-    getFilters().then(setFilterOpts).catch(() => {});
-  }, []);
+    getFilters(filters.group || undefined)
+      .then((opts) => {
+        setFilterOpts(opts);
+        // If the selected user is not a member of the chosen group, clear it.
+        if (filters.user && !opts.users.some((u) => u.id === filters.user)) {
+          setFilter('user', '');
+        }
+      })
+      .catch(() => {});
+    // Re-fetch the user list whenever the group selection changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.group]);
 
   const toggleProduct = (id: string) => {
     const current = filters.products;

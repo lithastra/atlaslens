@@ -29,6 +29,11 @@ helm install atlaslens ./charts/atlaslens \
   -f my-values.yaml
 ```
 
+> **Use the release name `atlaslens`.** The frontend image bakes its nginx upstream as
+> `http://atlaslens-backend:8000` (see `frontend/nginx.conf`), which matches the backend
+> Service only when the release is named `atlaslens`. A different release name produces a
+> differently-prefixed Service and the dashboard cannot reach the API.
+
 ## Secrets — do not commit real tokens
 
 The chart creates a Secret from `secrets.*` values **only as a convenience**. Never put real

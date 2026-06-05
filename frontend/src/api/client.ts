@@ -127,8 +127,9 @@ export interface FilterOptions {
   groups: { id: string; name: string }[];
 }
 
-export function getFilters() {
-  return request<FilterOptions>('/filters');
+export function getFilters(group?: string) {
+  const qs = group ? `?group=${encodeURIComponent(group)}` : '';
+  return request<FilterOptions>(`/filters${qs}`);
 }
 
 export interface WorkItem {
