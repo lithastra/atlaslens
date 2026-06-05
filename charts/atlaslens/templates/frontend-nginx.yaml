@@ -1,0 +1,75 @@
+{{- $backend := printf "%s-backend" (include "atlaslens.fullname" .) -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "atlaslens.fullname" . }}-nginx
+  labels:
+    {{- include "atlaslens.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+data:
+  # Rendered with the real backend Service name so the deployment works
+  # under any Helm release name (decoupled from the image-baked default).
+  default.conf: |
+    server {
+        listen 80;
+        root /usr/share/nginx/html;
+        index index.html;
+
+        location /auth/ {
+            proxy_pass http://{{ $backend }}:{{ .Values.backend.service.port }};
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location /events {
+            proxy_pass http://{{ $backend }}:{{ .Values.backend.service.port }};
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location /aggregations/ {
+            proxy_pass http://{{ $backend }}:{{ .Values.backend.service.port }};
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location /items {
+            proxy_pass http://{{ $backend }}:{{ .Values.backend.service.port }};
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location /exports {
+            proxy_pass http://{{ $backend }}:{{ .Values.backend.service.port }};
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location /reports/ {
+            proxy_pass http://{{ $backend }}:{{ .Values.backend.service.port }};
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location /filters {
+            proxy_pass http://{{ $backend }}:{{ .Values.backend.service.port }};
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location /health {
+            proxy_pass http://{{ $backend }}:{{ .Values.backend.service.port }};
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location /sync-status {
+            proxy_pass http://{{ $backend }}:{{ .Values.backend.service.port }};
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+    }

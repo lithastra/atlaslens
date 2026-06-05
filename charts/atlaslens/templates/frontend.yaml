@@ -38,10 +38,11 @@ spec:
       labels:
         {{- include "atlaslens.labels" . | nindent 8 }}
         app.kubernetes.io/component: frontend
-      {{- with .Values.frontend.podAnnotations }}
       annotations:
+        checksum/nginx: {{ include (print $.Template.BasePath "/frontend-nginx.yaml") . | sha256sum }}
+        {{- with .Values.frontend.podAnnotations }}
         {{- toYaml . | nindent 8 }}
-      {{- end }}
+        {{- end }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
@@ -54,8 +55,16 @@ spec:
           ports:
             - name: http
               containerPort: 80
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
           resources:
             {{- toYaml .Values.frontend.resources | nindent 12 }}
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: {{ include "atlaslens.fullname" . }}-nginx
       {{- with .Values.frontend.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
