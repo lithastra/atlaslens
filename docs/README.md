@@ -12,28 +12,30 @@ mkdocs serve            # live-reload preview at http://localhost:8000
 mkdocs build --strict   # production build into ./site (CI runs this)
 ```
 
-## Deployment — Cloudflare Pages
+## Deployment — Cloudflare Workers Builds
 
-The site is deployed via **Cloudflare Pages (Git integration)** — Cloudflare builds directly
-from this repo on every push to `main`. There is no GitHub Pages and no deploy workflow; the
-GitHub Action here only runs a strict build check.
+The site is deployed to Cloudflare directly from this repo (Git integration). Cloudflare builds
+the MkDocs site and `npx wrangler deploy` serves `./site` as a static-assets Worker, configured
+by [`wrangler.jsonc`](wrangler.jsonc). There is no GitHub Pages; the GitHub Action here only
+runs a strict build check.
 
-### One-time setup (Cloudflare dashboard → Workers & Pages → Create → Pages → Connect to Git)
+### One-time setup (Cloudflare dashboard → Workers & Pages → Create → connect Git)
 
 | Setting | Value |
 |---------|-------|
 | Repository | `lithastra/atlaslens` |
-| Production branch | `main` |
-| Root directory *(Build → advanced)* | `docs` |
+| Root directory | `docs` |
 | Build command | `pip install -r requirements.txt && mkdocs build` |
-| Build output directory | `site` |
-| Environment variable | `PYTHON_VERSION` = `3.12` |
+| Deploy command | `npx wrangler deploy` |
+| Build variable | `PYTHON_VERSION` = `3.12` |
+
+The build/deploy API token needs the **Workers Scripts: Edit** permission. The static output
+directory (`./site`) comes from `wrangler.jsonc`, not a dashboard field.
 
 ### Custom domain
 
-In the Pages project → **Custom domains** → add `docs.atlaslens.lithastra.com`. Because
-`lithastra.com` is already on Cloudflare, the DNS `CNAME` and TLS certificate are created
-automatically — no manual DNS record needed.
+In the Worker → **Settings → Domains & Routes** → add `docs.atlaslens.lithastra.com`. Because
+`lithastra.com` is already on Cloudflare, the DNS record and TLS certificate are created
+automatically — no manual DNS entry needed.
 
-> Each commit to `main` that touches `docs/**` triggers a Cloudflare build; pull requests get
-> preview deployments automatically.
+> Each push to `main` that touches `docs/**` triggers a Cloudflare build.

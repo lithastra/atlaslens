@@ -1,0 +1,11 @@
+{
+  // Static-assets-only Worker that serves the MkDocs build output.
+  // Used by Cloudflare Workers Builds with deploy command `npx wrangler deploy`.
+  // Root directory is `docs`, so `./site` is the mkdocs build output (docs/site).
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "atlaslens-docs",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./site"
+  }
+}
