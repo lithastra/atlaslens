@@ -12,29 +12,26 @@ mkdocs serve            # live-reload preview at http://localhost:8000
 mkdocs build --strict   # production build into ./site (CI runs this)
 ```
 
-## Deployment — Cloudflare Workers Builds
+## Deployment — Cloudflare Pages
 
-The site is deployed to Cloudflare directly from this repo (Git integration). Cloudflare builds
-the MkDocs site and `npx wrangler deploy` serves `./site` as a static-assets Worker, configured
-by [`wrangler.jsonc`](wrangler.jsonc). There is no GitHub Pages; the GitHub Action here only
-runs a strict build check.
+The site is deployed via **Cloudflare Pages (Git integration)** — Cloudflare builds the MkDocs
+site directly from this repo on every push to `main` and serves the output. There is no GitHub
+Pages; the GitHub Action here only runs a strict build check.
 
-### One-time setup (Cloudflare dashboard → Workers & Pages → Create → connect Git)
+### One-time setup (Cloudflare dashboard → Workers & Pages → Create → Pages → connect Git)
 
 | Setting | Value |
 |---------|-------|
 | Repository | `lithastra/atlaslens` |
-| Root directory | `docs` |
+| Production branch | `main` |
+| Root directory *(Build → advanced)* | `docs` |
 | Build command | `pip install -r requirements.txt && mkdocs build` |
-| Deploy command | `npx wrangler deploy` |
+| Build output directory | `site` |
 | Build variable | `PYTHON_VERSION` = `3.12` |
-
-The build/deploy API token needs the **Workers Scripts: Edit** permission. The static output
-directory (`./site`) comes from `wrangler.jsonc`, not a dashboard field.
 
 ### Custom domain
 
-In the Worker → **Settings → Domains & Routes** → add `docs.atlaslens.lithastra.com`. Because
+In the Pages project → **Custom domains** → add `docs.atlaslens.lithastra.com`. Because
 `lithastra.com` is already on Cloudflare, the DNS record and TLS certificate are created
 automatically — no manual DNS entry needed.
 
