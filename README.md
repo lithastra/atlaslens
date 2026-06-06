@@ -1,6 +1,11 @@
 # AtlasLens
 
+[![Documentation](https://img.shields.io/badge/docs-docs.atlaslens.lithastra.com-2f6fed)](https://docs.atlaslens.lithastra.com)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+
 A local, admin-only web dashboard that continuously pulls **audit** and **activity** data from your Atlassian Cloud suite — Jira, Confluence, Bitbucket, and Jira Service Management — normalises it into one store, and presents a unified view for filtering, trends, rankings, and forensic investigation.
+
+📖 **Full documentation: [docs.atlaslens.lithastra.com](https://docs.atlaslens.lithastra.com)**
 
 ## Screenshots
 
