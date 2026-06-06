@@ -9,7 +9,12 @@ _db: AsyncIOMotorDatabase | None = None
 
 async def connect_db() -> AsyncIOMotorDatabase:
     global _client, _db
-    _client = AsyncIOMotorClient(settings.mongo_uri)
+    # tz_aware=True so datetimes read back from MongoDB are timezone-aware
+    # (UTC) rather than naive. Naive datetimes serialize without an offset,
+    # which the browser then interprets as local time — making "last sync"
+    # render hours off. Aware UTC values serialize with +00:00 and the
+    # frontend converts them to the viewer's local timezone correctly.
+    _client = AsyncIOMotorClient(settings.mongo_uri, tz_aware=True)
     _db = _client[settings.mongo_db]
     await _create_indexes(_db)
     return _db
