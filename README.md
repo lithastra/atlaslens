@@ -2,6 +2,23 @@
 
 A local, admin-only web dashboard that continuously pulls **audit** and **activity** data from your Atlassian Cloud suite — Jira, Confluence, Bitbucket, and Jira Service Management — normalises it into one store, and presents a unified view for filtering, trends, rankings, and forensic investigation.
 
+## Screenshots
+
+![AtlasLens Overview](imgs/1-overview.png)
+
+*Overview — KPI cards, event-volume timeline, activity-by-product split, recent events, and top contributors.*
+
+| | |
+|:---:|:---:|
+| ![Productivity](imgs/2-productivity.png) | ![Security & Forensics](imgs/3-security.png) |
+| **Productivity** — created-vs-updated trends, contributor & area rankings | **Security & Forensics** — permission/group changes, sign-in Guard gap surfaced honestly, sensitive ops |
+| ![User Timeline](imgs/4-user-timeline.png) | ![Work Items](imgs/5-workitems.png) |
+| **User Timeline** — cross-product per-user investigation | **Work Items** — per-person tickets, PRs, and pages with deep links |
+| ![Connector Health](imgs/6-api-connectors.png) | ![Reports & Export](imgs/7-reports.png) |
+| **Connector Health** — live per-connector sync status & cursors | **Reports & Export** — filtered CSV/PDF with integrity stamp |
+
+> Screenshots are from the [2-minute demo](#try-it-in-2-minutes-no-atlassian-instance-needed) (synthetic data).
+
 ## Try it in 2 minutes (no Atlassian instance needed)
 
 Bring up the full stack pre-loaded with synthetic data and explore every view:
