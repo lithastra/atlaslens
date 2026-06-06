@@ -1,0 +1,82 @@
+site_name: AtlasLens
+site_description: >-
+  Self-hosted audit & activity dashboard for the Atlassian Cloud suite —
+  Jira, Confluence, Bitbucket, and Jira Service Management.
+site_url: https://docs.atlaslens.lithastra.com/
+repo_url: https://github.com/lithastra/atlaslens
+repo_name: lithastra/atlaslens
+edit_uri: edit/main/docs/content/
+docs_dir: content
+site_dir: site
+copyright: >-
+  AtlasLens is not affiliated with, endorsed by, or sponsored by Atlassian.
+  Atlassian, Jira, Confluence, Bitbucket, and Jira Service Management are
+  trademarks of Atlassian Pty Ltd.
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - content.code.copy
+    - content.action.edit
+    - search.suggest
+    - search.highlight
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.tabbed:
+      alternate_style: true
+
+plugins:
+  - search
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/lithastra/atlaslens
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Try the demo: install/demo.md
+      - Docker Compose: install/docker.md
+      - Kubernetes (Helm): install/kubernetes.md
+  - Configuration: configuration.md
+  - Architecture: architecture.md
+  - Connectors & data sources: connectors.md
+  - Dashboard: dashboard.md
+  - Operations: operations.md
+  - Security & compliance: security-compliance.md
+  - FAQ: faq.md
