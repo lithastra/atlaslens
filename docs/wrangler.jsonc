@@ -3,7 +3,7 @@
   // Used by Cloudflare Workers Builds with deploy command `npx wrangler deploy`.
   // Root directory is `docs`, so `./site` is the mkdocs build output (docs/site).
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "atlaslens-docs",
+  "name": "atlaslens",
   "compatibility_date": "2025-09-01",
   "assets": {
     "directory": "./site"
