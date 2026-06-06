@@ -5,6 +5,10 @@ from fastapi import APIRouter, Depends, Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from atlaslens.api.deps import get_current_user, get_database
+from atlaslens.api.routes.events import (
+    _build_filter,
+    _resolve_group_members,
+)
 
 router = APIRouter(prefix="/aggregations", tags=["aggregations"])
 
@@ -14,6 +18,54 @@ DB = Annotated[
 CurrentUser = Annotated[dict[str, Any], Depends(get_current_user)]
 
 
+async def _agg_match(
+    db: AsyncIOMotorDatabase,
+    *,
+    product: list[str] | None = None,
+    deployment: list[str] | None = None,
+    actor: str | None = None,
+    group: str | None = None,
+    operation: str | None = None,
+    category: str | None = None,
+    severity: str | None = None,
+    object_type: str | None = None,
+    pipeline: str | None = None,
+    q: str | None = None,
+    year: int | None = None,
+    month: int | None = None,
+    day: int | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+) -> dict[str, Any]:
+    """Build the $match for an aggregation using the SAME filter logic as
+    /events, so KPI/chart numbers honour every sidebar filter (actor, group,
+    date drill-down, etc.) instead of just a subset.
+    """
+    match = _build_filter(
+        product=product,
+        deployment=deployment,
+        actor=actor,
+        group=group,
+        operation=operation,
+        category=category,
+        severity=severity,
+        object_type=object_type,
+        pipeline=pipeline,
+        q=q,
+        year=year,
+        month=month,
+        day=day,
+        date_from=date_from,
+        date_to=date_to,
+        db=db,
+    )
+    if group:
+        member_ids = await _resolve_group_members(db, group)
+        if member_ids is not None:
+            match["actor_id"] = {"$in": member_ids}
+    return match
+
+
 @router.get("/timeseries")
 async def timeseries(
     db: DB,
@@ -21,17 +73,36 @@ async def timeseries(
     granularity: str = Query("day", pattern="^(day|week)$"),
     group_by: str = Query("category", pattern="^(category|product|operation)$"),
     product: Annotated[list[str] | None, Query()] = None,
+    deployment: Annotated[list[str] | None, Query()] = None,
+    actor: str | None = None,
+    group: str | None = None,
+    operation: str | None = None,
     category: str | None = None,
     severity: str | None = None,
+    object_type: str | None = None,
     pipeline: str | None = None,
+    q: str | None = None,
+    year: int | None = None,
+    month: int | None = None,
+    day: int | None = None,
     date_from: str | None = Query(None, alias="from"),
     date_to: str | None = Query(None, alias="to"),
 ) -> list[dict[str, Any]]:
-    match = _match_stage(
+    match = await _agg_match(
+        db,
         product=product,
+        deployment=deployment,
+        actor=actor,
+        group=group,
+        operation=operation,
         category=category,
         severity=severity,
+        object_type=object_type,
         pipeline=pipeline,
+        q=q,
+        year=year,
+        month=month,
+        day=day,
         date_from=date_from,
         date_to=date_to,
     )
@@ -95,17 +166,36 @@ async def top(
     ),
     n: int = Query(10, alias="limit", le=50),
     product: Annotated[list[str] | None, Query()] = None,
+    deployment: Annotated[list[str] | None, Query()] = None,
+    actor: str | None = None,
+    group: str | None = None,
+    operation: str | None = None,
     category: str | None = None,
     severity: str | None = None,
+    object_type: str | None = None,
     pipeline: str | None = None,
+    q: str | None = None,
+    year: int | None = None,
+    month: int | None = None,
+    day: int | None = None,
     date_from: str | None = Query(None, alias="from"),
     date_to: str | None = Query(None, alias="to"),
 ) -> list[dict[str, Any]]:
-    match = _match_stage(
+    match = await _agg_match(
+        db,
         product=product,
+        deployment=deployment,
+        actor=actor,
+        group=group,
+        operation=operation,
         category=category,
         severity=severity,
+        object_type=object_type,
         pipeline=pipeline,
+        q=q,
+        year=year,
+        month=month,
+        day=day,
         date_from=date_from,
         date_to=date_to,
     )
@@ -175,17 +265,36 @@ async def summary(
     db: DB,
     _user: CurrentUser,
     product: Annotated[list[str] | None, Query()] = None,
+    deployment: Annotated[list[str] | None, Query()] = None,
+    actor: str | None = None,
+    group: str | None = None,
+    operation: str | None = None,
     category: str | None = None,
     severity: str | None = None,
+    object_type: str | None = None,
     pipeline: str | None = None,
+    q: str | None = None,
+    year: int | None = None,
+    month: int | None = None,
+    day: int | None = None,
     date_from: str | None = Query(None, alias="from"),
     date_to: str | None = Query(None, alias="to"),
 ) -> dict[str, Any]:
-    match = _match_stage(
+    match = await _agg_match(
+        db,
         product=product,
+        deployment=deployment,
+        actor=actor,
+        group=group,
+        operation=operation,
         category=category,
         severity=severity,
+        object_type=object_type,
         pipeline=pipeline,
+        q=q,
+        year=year,
+        month=month,
+        day=day,
         date_from=date_from,
         date_to=date_to,
     )
@@ -253,32 +362,3 @@ async def summary(
     return result
 
 
-def _match_stage(
-    *,
-    product: list[str] | None,
-    category: str | None,
-    severity: str | None,
-    pipeline: str | None,
-    date_from: str | None,
-    date_to: str | None,
-) -> dict[str, Any]:
-    match: dict[str, Any] = {}
-    if product:
-        match["product"] = (
-            {"$in": product} if len(product) > 1 else product[0]
-        )
-    if category:
-        match["category"] = category
-    if severity:
-        match["severity"] = severity
-    if pipeline:
-        match["pipeline"] = pipeline
-    if date_from or date_to:
-        d: dict[str, Any] = {}
-        if date_from:
-            d["$gte"] = datetime.fromisoformat(date_from)
-        if date_to:
-            d["$lte"] = datetime.fromisoformat(date_to)
-        if d:
-            match["occurred_at"] = d
-    return match
