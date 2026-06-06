@@ -6,8 +6,9 @@ A local, admin-only web dashboard that continuously pulls **audit** and **activi
 
 - **Two ingestion pipelines** — security/forensics (audit logs) and productivity (content/activity) feeding one unified event store
 - **Incremental sync** — cursor-based polling with idempotent upserts; no duplicates, no data loss windows
+- **On-demand sync + live status** — trigger a sync from the dashboard and watch per-connector progress in real time; only one sync runs at a time, and a new run pre-empts the in-flight one
 - **Cross-product investigation** — per-user timelines spanning all four Atlassian products
-- **Filtering & aggregation** — by product, date, user, group, operation, category, severity
+- **Filtering & aggregation** — every KPI, chart, and ranking honours the active filters (product, date, user, group, operation, category, severity)
 - **Work items view** — per-person list of tickets, PRs, and pages with deep links
 - **Compliance exports** — CSV/PDF with integrity stamps (count, SHA-256, filter criteria, timestamp)
 - **Field-level encryption** — email identifiers encrypted at rest (display names kept plaintext for query/aggregation; see [COMPLIANCE.md](COMPLIANCE.md))
@@ -42,25 +43,33 @@ Copy `.env.example` to `.env` and fill in your Atlassian credentials before runn
 
 ## Deploy on Kubernetes (Helm)
 
-A Helm chart is provided in [`charts/atlaslens`](charts/atlaslens). It deploys the backend, frontend, and an optional single-node MongoDB. Tagged releases are published to GHCR as an OCI artifact by the [release workflow](.github/workflows/release-chart.yml).
+A Helm chart is provided in [`charts/atlaslens`](charts/atlaslens). It deploys the backend, frontend, and an optional single-node MongoDB. Each `v*` tag publishes the chart **and** the container images to GHCR (all public — no pull secrets needed) via the [release workflow](.github/workflows/release-chart.yml):
+
+- Chart — `oci://ghcr.io/lithastra/charts/atlaslens`
+- Backend image — `ghcr.io/lithastra/atlaslens-backend`
+- Frontend image — `ghcr.io/lithastra/atlaslens-frontend`
+
+Install the latest release (**1.2.0**):
 
 ```bash
-# From GHCR (published on each v* tag):
-helm install atlaslens oci://ghcr.io/lithastra/charts/atlaslens \
-  --version 1.0.0 \
-  --namespace atlaslens --create-namespace -f my-values.yaml
-
-# …or from a checkout:
-helm install atlaslens ./charts/atlaslens --namespace atlaslens --create-namespace -f my-values.yaml
+helm upgrade --install atlaslens oci://ghcr.io/lithastra/charts/atlaslens --version 1.2.0 \
+  --namespace atlaslens --create-namespace \
+  -f my-values.yaml \
+  --set backend.image.repository=ghcr.io/lithastra/atlaslens-backend \
+  --set frontend.image.repository=ghcr.io/lithastra/atlaslens-frontend
 ```
 
-Pass Atlassian tokens and the encryption/JWT secrets at install time (never commit them) or point `secrets.existingSecret` at a Secret you manage. After install, seed an admin:
+The image `tag` defaults to the chart's appVersion (`1.2.0`), so only the repositories need pointing at GHCR. Pass Atlassian tokens and the encryption/JWT secrets via your values file (never commit them) or point `secrets.existingSecret` at a Secret you manage. After install, seed an admin (there is no signup page by design):
 
 ```bash
 kubectl -n atlaslens exec deploy/atlaslens-backend -- python -m atlaslens.cli.seed_admin --username admin
 ```
 
 See the [chart README](charts/atlaslens/README.md) for all values and secret handling.
+
+## Releases
+
+Versioned releases are tracked on the [GitHub releases page](https://github.com/lithastra/atlaslens/releases). The current release is **[v1.2.0](https://github.com/lithastra/atlaslens/releases/tag/v1.2.0)**, which adds on-demand sync with live per-connector status, filter scoping across all aggregations, timezone-correct timestamps, and publishing of the container images alongside the Helm chart.
 
 ## Status
 
@@ -74,6 +83,7 @@ All planned phases (P0–P7) are implemented and verified against live data.
 | Identity resolution — accountId → person, cross-product | ✅ |
 | Group / canonical-team resolution + membership | ✅ |
 | Query API + JWT auth + admin seeding (CLI) | ✅ |
+| On-demand sync + live per-connector status (cancellable, single-run) | ✅ |
 | Dashboard — Overview, Productivity, Security, Timeline, Work Items, Reports, Health | ✅ |
 | CSV / PDF exports with integrity stamp | ✅ |
 | Compliance — 1-year TTL, email encryption, append-only, bcrypt | ✅ (see [COMPLIANCE.md](COMPLIANCE.md)) |
