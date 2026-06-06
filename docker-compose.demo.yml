@@ -1,0 +1,63 @@
+# Zero-config demo stack — explore AtlasLens with synthetic data, no
+# Atlassian instance or credentials required.
+#
+#   docker compose -f docker-compose.demo.yml up --build
+#   open http://localhost:8080        (login: admin / atlaslens-demo)
+#
+# The `seed` job loads ~4000 synthetic events, 12 people, and 4 teams so
+# every dashboard view is populated. Tear down with:
+#   docker compose -f docker-compose.demo.yml down -v
+services:
+  mongo:
+    image: mongo:7
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - demo-mongo-data:/data/db
+
+  atlaslens-backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    image: atlaslens-backend:demo
+    environment:
+      ATLASLENS_MONGO_URI: mongodb://mongo:27017
+      ATLASLENS_JWT_SECRET: demo-only-not-a-secret
+      ATLASLENS_CORS_ORIGINS: '["http://localhost:8080"]'
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+  # One-shot: seed synthetic data + a demo admin, then exit.
+  seed:
+    image: atlaslens-backend:demo
+    environment:
+      ATLASLENS_MONGO_URI: mongodb://mongo:27017
+    command:
+      - sh
+      - -c
+      - >-
+        python -m atlaslens.cli.seed_demo --drop &&
+        python -m atlaslens.cli.seed_admin --username admin --password atlaslens-demo
+        || true
+    depends_on:
+      mongo:
+        condition: service_healthy
+      atlaslens-backend:
+        condition: service_started
+    restart: "no"
+
+  atlaslens-frontend:
+    build:
+      context: frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - atlaslens-backend
+
+volumes:
+  demo-mongo-data:

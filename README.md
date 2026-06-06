@@ -2,6 +2,17 @@
 
 A local, admin-only web dashboard that continuously pulls **audit** and **activity** data from your Atlassian Cloud suite — Jira, Confluence, Bitbucket, and Jira Service Management — normalises it into one store, and presents a unified view for filtering, trends, rankings, and forensic investigation.
 
+## Try it in 2 minutes (no Atlassian instance needed)
+
+Bring up the full stack pre-loaded with synthetic data and explore every view:
+
+```bash
+docker compose -f docker-compose.demo.yml up --build
+# then open http://localhost:8080  →  log in as  admin / atlaslens-demo
+```
+
+This seeds ~4,000 synthetic events across Jira, Confluence, Bitbucket, and JSM, plus 12 people and 4 teams, so Overview, Productivity, Security, Timeline, and Work Items are all populated. Tear down with `docker compose -f docker-compose.demo.yml down -v`.
+
 ## Features
 
 - **Two ingestion pipelines** — security/forensics (audit logs) and productivity (content/activity) feeding one unified event store
@@ -31,6 +42,9 @@ pip install -e ".[dev]"
 
 # Provision an admin account
 python -m atlaslens.cli.seed_admin --username admin
+
+# (optional) load synthetic demo data to explore without Atlassian
+python -m atlaslens.cli.seed_demo
 
 # Run the API server
 uvicorn atlaslens.api.main:app --reload

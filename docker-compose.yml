@@ -8,13 +8,17 @@ services:
     environment:
       MONGO_INITDB_DATABASE: atlaslens
 
-  backend:
+  # Service name must be atlaslens-backend: the frontend image's nginx
+  # proxies the API to http://atlaslens-backend:8000.
+  atlaslens-backend:
     build:
       context: .
       dockerfile: backend/Dockerfile
     ports:
       - "8000:8000"
-    env_file: .env
+    env_file:
+      - path: .env
+        required: false
     environment:
       ATLASLENS_MONGO_URI: mongodb://mongo:27017
     depends_on:
@@ -27,7 +31,7 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - backend
+      - atlaslens-backend
 
 volumes:
   mongo-data:
