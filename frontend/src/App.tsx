@@ -36,6 +36,8 @@ export default function App() {
         <Route path="workitems" element={<WorkItemsPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="health" element={<HealthPage />} />
+        {/* Unknown paths fall back to the dashboard home. */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>
   );

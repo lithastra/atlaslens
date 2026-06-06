@@ -57,12 +57,6 @@ data:
             proxy_set_header X-Real-IP $remote_addr;
         }
 
-        location /health {
-            proxy_pass http://{{ $backend }}:{{ .Values.backend.service.port }};
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-        }
-
         location /sync-status {
             proxy_pass http://{{ $backend }}:{{ .Values.backend.service.port }};
             proxy_set_header Host $host;
