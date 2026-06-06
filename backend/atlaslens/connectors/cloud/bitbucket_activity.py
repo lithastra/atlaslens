@@ -217,7 +217,7 @@ class BitbucketActivityConnector:
 
 def _parse_date(s: str) -> datetime:
     if not s:
-        return datetime.now()
+        return datetime.now(UTC)
     if s.endswith("Z"):
         s = s[:-1] + "+00:00"
     if len(s) >= 5 and s[-5] in "+-" and s[-4:].isdigit():

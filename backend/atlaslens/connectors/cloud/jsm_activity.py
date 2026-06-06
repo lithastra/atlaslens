@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -153,7 +153,7 @@ class JsmActivityConnector:
 
 def _parse_date(s: str) -> datetime:
     if not s:
-        return datetime.now()
+        return datetime.now(UTC)
     if len(s) >= 5 and s[-5] in "+-" and s[-4:].isdigit():
         s = s[:-5] + s[-5:-2] + ":" + s[-2:]
     return datetime.fromisoformat(s)

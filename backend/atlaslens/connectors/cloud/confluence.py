@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -116,7 +116,7 @@ class ConfluenceCloudConnector:
 
 def _parse_confluence_date(val: str | int) -> datetime:
     if not val:
-        return datetime.now()
+        return datetime.now(UTC)
     if isinstance(val, (int, float)):
         return datetime.utcfromtimestamp(val / 1000)
     if len(val) >= 5 and val[-5] in "+-" and val[-4:].isdigit():

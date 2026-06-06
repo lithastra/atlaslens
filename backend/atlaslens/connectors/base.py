@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any, Protocol, runtime_checkable
 
 from atlaslens.models.event import Deployment, Product
@@ -11,6 +11,16 @@ class RawEvent:
     occurred_at: datetime
     event_type: str
     payload: dict[str, Any]
+
+    def __post_init__(self) -> None:
+        # Normalise every event time to UTC on the way in. Sources may return
+        # timestamps in the instance's local timezone (e.g. Atlassian returns
+        # audit times with a +09:00 offset for a JST-configured site); a naive
+        # value is assumed to already be UTC.
+        if self.occurred_at.tzinfo is None:
+            self.occurred_at = self.occurred_at.replace(tzinfo=UTC)
+        else:
+            self.occurred_at = self.occurred_at.astimezone(UTC)
 
 
 Cursor = str | None
