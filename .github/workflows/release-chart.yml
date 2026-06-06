@@ -1,7 +1,7 @@
-name: Release Helm chart
+name: Release
 
-# Packages the AtlasLens Helm chart and pushes it to GHCR as an OCI artifact.
-# Triggered by pushing a version tag (e.g. v1.0.0), or run manually.
+# On a version tag (e.g. v1.2.0) — or a manual run — build and push the
+# backend/frontend images and the Helm chart to GHCR as OCI artifacts.
 on:
   push:
     tags:
@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Chart version to publish (without leading v). Defaults to Chart.yaml."
+        description: "Version to publish (without leading v). Defaults to Chart.yaml."
         required: false
         type: string
 
@@ -17,23 +17,18 @@ permissions:
   contents: read
   packages: write
 
-env:
-  CHART_DIR: charts/atlaslens
-
 jobs:
-  release-chart:
+  version:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install Helm
-        uses: azure/setup-helm@v4
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
         with:
           version: v3.20.0
-
       - name: Resolve and validate version
-        id: version
+        id: v
         env:
           EVENT_NAME: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
@@ -45,7 +40,7 @@ jobs:
           elif [ -n "$INPUT_VERSION" ]; then
             VERSION="$INPUT_VERSION"
           else
-            VERSION="$(helm show chart "$CHART_DIR" | awk '/^version:/ {print $2}')"
+            VERSION="$(helm show chart charts/atlaslens | awk '/^version:/ {print $2}')"
           fi
           # Reject anything that is not a SemVer-shaped version — guards against
           # injection via the manual-dispatch input and malformed tags.
@@ -54,21 +49,62 @@ jobs:
             exit 1
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Publishing chart version: $VERSION"
+          echo "Publishing version: $VERSION"
 
-      - name: Lint chart
-        run: helm lint "$CHART_DIR"
-
-      - name: Package chart
+  images:
+    needs: version
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      OWNER: ${{ github.repository_owner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Log in to GHCR
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: ${{ github.actor }}
         run: |
           set -euo pipefail
-          helm package "$CHART_DIR" \
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io --username "$ACTOR" --password-stdin
+      - name: Build and push backend + frontend images
+        run: |
+          set -euo pipefail
+          OWNER_LC="$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')"
+          BE="ghcr.io/${OWNER_LC}/atlaslens-backend"
+          FE="ghcr.io/${OWNER_LC}/atlaslens-frontend"
+          docker build -t "${BE}:${VERSION}" -t "${BE}:latest" -f backend/Dockerfile .
+          docker build -t "${FE}:${VERSION}" -t "${FE}:latest" frontend
+          docker push "${BE}:${VERSION}"
+          docker push "${BE}:latest"
+          docker push "${FE}:${VERSION}"
+          docker push "${FE}:latest"
+          {
+            echo "### Images published :package:"
+            echo ""
+            echo "- \`${BE}:${VERSION}\`"
+            echo "- \`${FE}:${VERSION}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  chart:
+    needs: version
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      OWNER: ${{ github.repository_owner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.20.0
+      - name: Lint chart
+        run: helm lint charts/atlaslens
+      - name: Package chart
+        run: |
+          set -euo pipefail
+          helm package charts/atlaslens \
             --version "$VERSION" \
             --app-version "$VERSION" \
             --destination dist
-
       - name: Log in to GHCR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -76,28 +112,15 @@ jobs:
         run: |
           set -euo pipefail
           printf '%s' "$GH_TOKEN" | helm registry login ghcr.io --username "$ACTOR" --password-stdin
-
       - name: Push chart to GHCR
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-          OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
           OWNER_LC="$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')"
           helm push "dist/atlaslens-${VERSION}.tgz" "oci://ghcr.io/${OWNER_LC}/charts"
-          echo "Pushed oci://ghcr.io/${OWNER_LC}/charts/atlaslens:${VERSION}"
-
-      - name: Summary
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
-          OWNER: ${{ github.repository_owner }}
-        run: |
-          set -euo pipefail
-          OWNER_LC="$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')"
           {
             echo "### Helm chart published :ship:"
             echo ""
             echo '```bash'
-            echo "helm install atlaslens oci://ghcr.io/${OWNER_LC}/charts/atlaslens --version ${VERSION}"
+            echo "helm upgrade --install atlaslens oci://ghcr.io/${OWNER_LC}/charts/atlaslens --version ${VERSION}"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
