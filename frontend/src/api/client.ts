@@ -166,10 +166,20 @@ export interface ConnectorStatus {
   last_success_at: string | null;
   last_error: string | null;
   note?: string;
+  state: string; // pending | running | done | error | cancelled | ok | idle
+  count: number | null;
+}
+
+export interface SyncStatus {
+  running: boolean;
+  cancelled: boolean;
+  started_at: string | null;
+  finished_at: string | null;
+  connectors: ConnectorStatus[];
 }
 
 export function getSyncStatus() {
-  return request<ConnectorStatus[]>('/sync-status');
+  return request<SyncStatus>('/sync-status');
 }
 
 export function triggerSync() {

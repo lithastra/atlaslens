@@ -844,3 +844,14 @@ table.tbl tr:hover td {
 .down {
   color: var(--high);
 }
+
+/* ---------- spinner (sync in progress) ---------- */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.spin {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}

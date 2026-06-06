@@ -1,4 +1,7 @@
 import logging
+from collections.abc import Callable
+from datetime import UTC, datetime
+from typing import Any
 
 import httpx
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -18,9 +21,21 @@ from atlaslens.ingest.runner import run_connector
 
 logger = logging.getLogger(__name__)
 
+# Synthetic connector id for the org group/membership sync (shares the
+# sync_state collection so its "last sync" persists like any connector).
+GROUPS_ID = "cloud:atlassian-org:groups"
+
+# Progress callback: report(connector_id, state, *, count=?, error=?)
+ReportFn = Callable[..., None]
+
+
+def _noop_report(*_args: Any, **_kwargs: Any) -> None:
+    pass
+
 
 async def run_all_audit(
     db: AsyncIOMotorDatabase,
+    report: ReportFn = _noop_report,
 ) -> dict[str, int | str]:
     results: dict[str, int | str] = {}
     cloud_id = settings.atlassian_cloud_id
@@ -59,21 +74,28 @@ async def run_all_audit(
 
         connectors.append(("bitbucket:audit", BitbucketCloudConnector()))
 
+        for label, _connector in connectors:
+            report(f"cloud:{label}", "pending")
         for label, connector in connectors:
+            cid = f"cloud:{label}"
+            report(cid, "running")
             try:
                 count = await run_connector(
                     db, connector, "audit"  # type: ignore[arg-type]
                 )
                 results[label] = count
+                report(cid, "done", count=count)
             except Exception as exc:
                 logger.error("%s failed: %s", label, exc)
                 results[label] = f"error: {exc}"
+                report(cid, "error", error=str(exc))
 
     return results
 
 
 async def run_all_activity(
     db: AsyncIOMotorDatabase,
+    report: ReportFn = _noop_report,
 ) -> dict[str, int | str]:
     results: dict[str, int | str] = {}
     cloud_id = settings.atlassian_cloud_id
@@ -121,44 +143,70 @@ async def run_all_activity(
                 ),
             ))
 
+        for label, _connector in connectors:
+            report(f"cloud:{label}", "pending")
         for label, connector in connectors:
+            cid = f"cloud:{label}"
+            report(cid, "running")
             try:
                 count = await run_connector(
                     db, connector, "activity"  # type: ignore[arg-type]
                 )
                 results[label] = count
+                report(cid, "done", count=count)
             except Exception as exc:
                 logger.error("%s failed: %s", label, exc)
                 results[label] = f"error: {exc}"
+                report(cid, "error", error=str(exc))
 
     return results
 
 
 async def run_group_sync(
     db: AsyncIOMotorDatabase,
+    report: ReportFn = _noop_report,
 ) -> dict[str, int | str]:
     cloud_id = settings.atlassian_cloud_id
     if not (cloud_id and settings.jira_api_token):
         return {}
+    report(GROUPS_ID, "running")
     jira_base = f"https://api.atlassian.com/ex/jira/{cloud_id}"
     auth = (settings.atlassian_email, settings.jira_api_token)
     async with httpx.AsyncClient() as client:
         try:
             res = await sync_groups(db, jira_base, auth, client)
+            await db["sync_state"].replace_one(
+                {"_id": GROUPS_ID},
+                {
+                    "_id": GROUPS_ID,
+                    "cursor": "",
+                    "last_success_at": datetime.now(UTC),
+                    "last_error": None,
+                },
+                upsert=True,
+            )
+            report(GROUPS_ID, "done", count=res["memberships"])
             return {
                 "groups:sync": res["groups"],
                 "groups:memberships": res["memberships"],
             }
         except Exception as exc:
             logger.error("group sync failed: %s", exc)
+            await db["sync_state"].update_one(
+                {"_id": GROUPS_ID},
+                {"$set": {"last_error": str(exc)}},
+                upsert=True,
+            )
+            report(GROUPS_ID, "error", error=str(exc))
             return {"groups:sync": f"error: {exc}"}
 
 
 async def run_all(
     db: AsyncIOMotorDatabase,
+    report: ReportFn = _noop_report,
 ) -> dict[str, int | str]:
     results: dict[str, int | str] = {}
-    results.update(await run_all_audit(db))
-    results.update(await run_all_activity(db))
-    results.update(await run_group_sync(db))
+    results.update(await run_all_audit(db, report))
+    results.update(await run_all_activity(db, report))
+    results.update(await run_group_sync(db, report))
     return results

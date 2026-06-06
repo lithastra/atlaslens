@@ -20,7 +20,7 @@ from atlaslens.api.routes import (
 )
 from atlaslens.config import settings
 from atlaslens.db import close_db, connect_db, get_db
-from atlaslens.ingest.scheduler import run_all
+from atlaslens.ingest.manager import manager
 from atlaslens.reports.generator import run_scheduled_reports
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s:%(name)s:%(message)s")
@@ -30,12 +30,14 @@ _scheduler: AsyncIOScheduler | None = None
 
 
 async def _ingest_tick() -> None:
+    # Scheduled tick: start a tracked sync unless one is already running
+    # (a manual "sync now" takes precedence and is never interrupted here).
     try:
-        db = get_db()
-        results = await run_all(db)
-        logger.info("Ingest cycle complete: %s", results)
+        status = await manager.start(get_db(), cancel_existing=False)
+        if status == "busy":
+            logger.info("Ingest tick skipped: a sync is already running")
     except Exception:
-        logger.exception("Ingest cycle failed")
+        logger.exception("Ingest tick failed to start")
 
 
 async def _reports_tick() -> None:
@@ -81,6 +83,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     if _scheduler and _scheduler.running:
         _scheduler.shutdown(wait=False)
+    await manager.cancel()
     await close_db()
 
 
