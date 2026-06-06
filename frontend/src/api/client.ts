@@ -172,6 +172,10 @@ export function getSyncStatus() {
   return request<ConnectorStatus[]>('/sync-status');
 }
 
+export function triggerSync() {
+  return request<{ status: string }>('/sync', { method: 'POST' });
+}
+
 export function exportData(params: Record<string, string | string[]>, format: 'csv' | 'pdf' = 'csv') {
   const sp = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {

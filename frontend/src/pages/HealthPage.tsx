@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getSyncStatus, type ConnectorStatus } from '../api/client';
+import { getSyncStatus, triggerSync, type ConnectorStatus } from '../api/client';
 
 function relativeTime(iso: string | null): string {
   if (!iso) return '--';
@@ -22,22 +22,64 @@ function statusLabel(status: ConnectorStatus): { text: string; cls: string } {
 export default function HealthPage() {
   const [connectors, setConnectors] = useState<ConnectorStatus[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
-  useEffect(() => {
-    setLoading(true);
+  const refresh = () =>
     getSyncStatus()
       .then(setConnectors)
       .finally(() => setLoading(false));
+
+  useEffect(() => {
+    refresh();
   }, []);
+
+  const onSyncNow = async () => {
+    setSyncing(true);
+    setSyncMsg(null);
+    try {
+      const res = await triggerSync();
+      setSyncMsg(
+        res.status === 'already_running'
+          ? 'A sync is already running…'
+          : 'Sync started — this runs in the background and may take a few minutes.',
+      );
+      // Give the first cycle a moment, then refresh the status table.
+      setTimeout(refresh, 8000);
+    } catch {
+      setSyncMsg('Failed to start sync.');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   if (loading) return <div className="empty">Loading...</div>;
 
   return (
     <>
-      <div className="muted" style={{ marginBottom: 14, fontSize: 13 }}>
-        One connector per <b style={{ color: 'var(--text-h)' }}>product x deployment</b>.
-        Each pulls incrementally from its last high-water mark and respects source rate limits.
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+          marginBottom: 14,
+        }}
+      >
+        <div className="muted" style={{ fontSize: 13 }}>
+          One connector per <b style={{ color: 'var(--text-h)' }}>product x deployment</b>.
+          Each pulls incrementally from its last high-water mark and respects source rate limits.
+        </div>
+        <button className="btn sm" onClick={onSyncNow} disabled={syncing}>
+          {syncing ? 'Starting…' : '↻ Sync now'}
+        </button>
       </div>
+
+      {syncMsg && (
+        <div className="muted" style={{ marginBottom: 12, fontSize: 12 }}>
+          {syncMsg}
+        </div>
+      )}
 
       <div className="card">
         <table className="tbl">
